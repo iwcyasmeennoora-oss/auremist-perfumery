@@ -1,0 +1,6 @@
+{
+  "name": "AUREMIST PERFUMERY",
+  "description": "Artisanal luxury perfumery crafting small-batch Eau de Parfum. Find the notes that feel like you.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
