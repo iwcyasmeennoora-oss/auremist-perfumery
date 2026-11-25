@@ -1,8 +1,13 @@
 import {
   AdminActivityEntry,
+  AdminCategoryRecord,
+  AdminCouponRecord,
+  AdminNotificationEntry,
   AdminOrderRecord,
   AdminOrderStatus,
   AdminPaymentStatus,
+  AdminProductRecord,
+  AdminStoreSettings,
   SalesRangeKey,
 } from '../types/admin';
 import { BottleSize, PaymentMethodType } from '../types/perfume';
@@ -14,6 +19,14 @@ export const ORDER_STATUS_META: Record<
   AdminOrderStatus,
   { label: string; toneClass: string }
 > = {
+  pending: {
+    label: 'Pending',
+    toneClass: 'text-[#8C6526] border-[#D6AD72] bg-[#F8F0E7]',
+  },
+  confirmed: {
+    label: 'Confirmed',
+    toneClass: 'text-[#351522] border-[#351522]/45 bg-[#FFF5E9]',
+  },
   order_received: {
     label: 'Order Received',
     toneClass: 'text-[#351522] border-[#D6AD72]/70 bg-[#FFF5E9]',
@@ -68,6 +81,10 @@ export const PAYMENT_STATUS_META: Record<
     label: 'Rejected',
     toneClass: 'text-[#7A1D38] border-[#7A1D38]/35 bg-[#FDF3F5]',
   },
+  reupload_requested: {
+    label: 'Re-upload Requested',
+    toneClass: 'text-[#8C6526] border-[#8C6526]/45 bg-[#FFF5E9]',
+  },
 };
 
 export function formatPaymentMethodShort(method: PaymentMethodType): string {
@@ -102,6 +119,140 @@ export function formatAdminDateTime(iso: string): string {
     return iso;
   }
 }
+
+export const INITIAL_ADMIN_PRODUCTS: AdminProductRecord[] = ALL_PERFUMES.map(
+  (p) => ({
+    id: p.id,
+    name: p.name,
+    subtitle: p.subtitle,
+    category: p.category,
+    audienceCategory: p.audienceCategory,
+    fragranceFamily: p.fragranceFamily,
+    concentration: p.concentration,
+    image: p.image,
+    inStock: p.inStock,
+    status: 'active',
+    topNotes: p.pyramid.top,
+    heartNotes: p.pyramid.heart,
+    baseNotes: p.pyramid.base,
+    variants: p.variants.map((v) => ({
+      size: v.size,
+      price: v.price,
+      originalPrice: v.originalPrice,
+      sku: v.sku,
+      stockCount: v.stockCount,
+    })),
+  }),
+);
+
+export const INITIAL_ADMIN_CATEGORIES: AdminCategoryRecord[] = [
+  {
+    id: 'cat-men',
+    name: 'Men',
+    slug: 'men',
+    description:
+      'Structured cedar, smoked agarwood, leather, and dry vetiver signatures crafted for men.',
+    isActive: true,
+    displayOrder: 1,
+  },
+  {
+    id: 'cat-women',
+    name: 'Women',
+    slug: 'women',
+    description:
+      'Centifolia rose, Florentine iris, sunlit neroli, and golden amber compositions for women.',
+    isActive: true,
+    displayOrder: 2,
+  },
+  {
+    id: 'cat-unisex',
+    name: 'Unisex',
+    slug: 'unisex',
+    description:
+      'Shared extrait creations balancing saffron threads, coastal citrus, and smoked oud.',
+    isActive: true,
+    displayOrder: 3,
+  },
+  {
+    id: 'cat-woody-oud',
+    name: 'Woody & Oud',
+    slug: 'woody-oud',
+    description:
+      'Resinous agarwood, dry Atlas cedar, and smoky vetiver compositions.',
+    isActive: true,
+    displayOrder: 4,
+  },
+  {
+    id: 'cat-floral',
+    name: 'Floral',
+    slug: 'floral',
+    description:
+      'Centifolia rose, violet leaf, Florentine iris, and translucent peony blends.',
+    isActive: true,
+    displayOrder: 5,
+  },
+  {
+    id: 'cat-amber-spice',
+    name: 'Amber & Spice',
+    slug: 'amber-spice',
+    description:
+      'Crimson saffron threads, Siam benzoin tears, and Madagascar vanilla warmth.',
+    isActive: true,
+    displayOrder: 6,
+  },
+  {
+    id: 'cat-fresh-botanicals',
+    name: 'Fresh Botanicals',
+    slug: 'fresh-botanicals',
+    description:
+      'Cold-pressed Amalfi citrus, white tea leaves, and sun-lit neroli blossoms.',
+    isActive: true,
+    displayOrder: 7,
+  },
+];
+
+export const INITIAL_ADMIN_COUPONS: AdminCouponRecord[] = [
+  {
+    id: 'coup-welcome10',
+    code: 'WELCOME10',
+    description: '10% welcome privilege on eligible signature fragrances.',
+    type: 'percentage',
+    value: 10,
+    minOrderPkr: 3000,
+    usageCount: 3,
+    usageLimit: 100,
+    expiresAt: '2026-12-31',
+    isActive: true,
+  },
+  {
+    id: 'coup-auremist200',
+    code: 'AUREMIST200',
+    description: 'Flat Rs. 200 boutique privilege across all bottle sizes.',
+    type: 'fixed',
+    value: 200,
+    minOrderPkr: 2500,
+    usageCount: 3,
+    usageLimit: 50,
+    expiresAt: '2026-12-31',
+    isActive: true,
+  },
+];
+
+export const INITIAL_STORE_SETTINGS: AdminStoreSettings = {
+  storeName: 'AUREMIST PERFUMERY',
+  tagline: 'Find the notes that feel like you.',
+  supportEmail: '',
+  supportPhone: '',
+  atelierAddress: '',
+  currencyLabel: 'PKR (Rs.)',
+  walletRecipientNumber: '',
+  walletInstructions: '',
+  codEnabled: true,
+  easypaisaEnabled: true,
+  jazzcashEnabled: true,
+  lowStockThreshold: LOW_STOCK_THRESHOLD,
+  deliveryZones: [],
+};
 
 /**
  * Demonstration sample orders clearly labeled for Phase 7 UI preview
@@ -365,6 +516,8 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     orderStatus: 'packed',
     transactionRefId: 'JC-6401189204',
     hasPrivateProof: true,
+    courierName: 'TCS Express',
+    trackingCode: 'TCS-PK-908411',
     isDemoRecord: true,
   },
   {
@@ -402,6 +555,9 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     paymentMethod: 'cod',
     paymentStatus: 'pay_on_delivery',
     orderStatus: 'shipped',
+    courierName: 'Leopards Courier',
+    trackingCode: 'LEO-7740192',
+    dispatchedAt: '2026-11-18T10:15:00.000Z',
     isDemoRecord: true,
   },
   {
@@ -441,6 +597,9 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     orderStatus: 'out_for_delivery',
     transactionRefId: 'EP-5119042817',
     hasPrivateProof: true,
+    courierName: 'Trax Logistics',
+    trackingCode: 'TRX-3109482',
+    dispatchedAt: '2026-11-15T11:30:00.000Z',
     isDemoRecord: true,
   },
   {
@@ -487,6 +646,9 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     paymentMethod: 'cod',
     paymentStatus: 'pay_on_delivery',
     orderStatus: 'delivered',
+    courierName: 'TCS Express',
+    trackingCode: 'TCS-PK-840219',
+    dispatchedAt: '2026-11-12T09:00:00.000Z',
     isDemoRecord: true,
   },
   {
@@ -526,6 +688,9 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     orderStatus: 'delivered',
     transactionRefId: 'JC-4109283711',
     hasPrivateProof: true,
+    courierName: 'M&P Express',
+    trackingCode: 'MP-5592014',
+    dispatchedAt: '2026-11-09T10:45:00.000Z',
     isDemoRecord: true,
   },
   {
@@ -565,6 +730,7 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     orderStatus: 'cancelled',
     transactionRefId: 'EP-INVALID-0041',
     hasPrivateProof: true,
+    paymentReviewNote: 'Reference ID not found in wallet statement.',
     isDemoRecord: true,
   },
   {
@@ -602,6 +768,9 @@ export const DEMO_ADMIN_ORDERS: AdminOrderRecord[] = [
     paymentMethod: 'cod',
     paymentStatus: 'pay_on_delivery',
     orderStatus: 'delivered',
+    courierName: 'TCS Express',
+    trackingCode: 'TCS-PK-710294',
+    dispatchedAt: '2026-10-30T11:00:00.000Z',
     isDemoRecord: true,
   },
 ];
@@ -611,7 +780,8 @@ export const DEMO_ADMIN_ACTIVITY: AdminActivityEntry[] = [
     id: 'act-1',
     timestamp: '2026-11-24T06:41:00.000Z',
     title: 'Manual payment proof submitted',
-    detail: 'Easypaisa transfer receipt awaiting review for order AUR-20261124-4821.',
+    detail:
+      'Easypaisa transfer receipt awaiting review for order AUR-20261124-4821.',
     orderNumber: 'AUR-20261124-4821',
     kind: 'payment',
   },
@@ -619,7 +789,8 @@ export const DEMO_ADMIN_ACTIVITY: AdminActivityEntry[] = [
     id: 'act-2',
     timestamp: '2026-11-24T04:15:00.000Z',
     title: 'New Cash on Delivery order received',
-    detail: 'Zainab Tariq placed a COD order from Gulberg III, Lahore (Rs. 5,300).',
+    detail:
+      'Zainab Tariq placed a COD order from Gulberg III, Lahore (Rs. 5,300).',
     orderNumber: 'AUR-20261124-4795',
     kind: 'order',
   },
@@ -627,7 +798,8 @@ export const DEMO_ADMIN_ACTIVITY: AdminActivityEntry[] = [
     id: 'act-3',
     timestamp: '2026-11-23T14:22:00.000Z',
     title: 'JazzCash transfer pending review',
-    detail: 'Order AUR-20261123-4710 (Rs. 11,050) awaiting payment verification.',
+    detail:
+      'Order AUR-20261123-4710 (Rs. 11,050) awaiting payment verification.',
     orderNumber: 'AUR-20261123-4710',
     kind: 'payment',
   },
@@ -648,6 +820,74 @@ export const DEMO_ADMIN_ACTIVITY: AdminActivityEntry[] = [
   },
 ];
 
+export const INITIAL_ADMIN_NOTIFICATIONS: AdminNotificationEntry[] = [
+  {
+    id: 'notif-1',
+    timestamp: '2026-11-24T06:41:00.000Z',
+    title: 'Pending Payment Verification',
+    message:
+      'Order AUR-20261124-4821 via Easypaisa (Rs. 8,620) requires admin review.',
+    category: 'payment',
+    unread: true,
+    targetSection: 'payment-verification',
+    relatedOrderId: 'demo-ord-1012',
+  },
+  {
+    id: 'notif-2',
+    timestamp: '2026-11-24T04:15:00.000Z',
+    title: 'New Order Received',
+    message:
+      'Zainab Tariq placed a Cash on Delivery order AUR-20261124-4795 (Rs. 5,300).',
+    category: 'order',
+    unread: true,
+    targetSection: 'orders',
+    relatedOrderId: 'demo-ord-1011',
+  },
+  {
+    id: 'notif-3',
+    timestamp: '2026-11-23T14:22:00.000Z',
+    title: 'JazzCash Proof Submitted',
+    message:
+      'Hamza Siddiqui uploaded transfer details for order AUR-20261123-4710 (Rs. 11,050).',
+    category: 'payment',
+    unread: true,
+    targetSection: 'payment-verification',
+    relatedOrderId: 'demo-ord-1010',
+  },
+  {
+    id: 'notif-4',
+    timestamp: '2026-11-22T12:10:00.000Z',
+    title: 'Low Stock Alert',
+    message:
+      'Amber Silk 50ml (AUR-AS-050) and Royal Agar variants are at or below threshold.',
+    category: 'inventory',
+    unread: true,
+    targetSection: 'inventory',
+  },
+  {
+    id: 'notif-5',
+    timestamp: '2026-11-19T12:45:00.000Z',
+    title: 'Shipment Ready to Dispatch',
+    message:
+      'Order AUR-20261119-4540 is packed and assigned to TCS Express.',
+    category: 'shipment',
+    unread: false,
+    targetSection: 'shipments',
+    relatedOrderId: 'demo-ord-1007',
+  },
+  {
+    id: 'notif-6',
+    timestamp: '2026-11-04T09:10:00.000Z',
+    title: 'Order Cancelled After Payment Review',
+    message:
+      'Order AUR-20261104-4119 was cancelled because reference ID EP-INVALID-0041 did not match wallet records.',
+    category: 'cancelled',
+    unread: true,
+    targetSection: 'orders',
+    relatedOrderId: 'demo-ord-1002',
+  },
+];
+
 export interface LowStockVariantEntry {
   productId: string;
   productName: string;
@@ -657,11 +897,12 @@ export interface LowStockVariantEntry {
   stockCount: number;
 }
 
-export function getLowStockVariants(
+export function getLowStockVariantsFromProducts(
+  products: AdminProductRecord[],
   threshold = LOW_STOCK_THRESHOLD,
 ): LowStockVariantEntry[] {
   const rows: LowStockVariantEntry[] = [];
-  for (const product of ALL_PERFUMES) {
+  for (const product of products) {
     for (const variant of product.variants) {
       if (variant.stockCount <= threshold) {
         rows.push({
@@ -689,6 +930,8 @@ export interface AdminOverviewMetrics {
 
 export function computeAdminOverviewMetrics(
   orders: AdminOrderRecord[],
+  products: AdminProductRecord[],
+  lowStockThreshold = LOW_STOCK_THRESHOLD,
 ): AdminOverviewMetrics {
   const activeOrders = orders.filter((o) => o.orderStatus !== 'cancelled');
   const totalSalesRevenue = activeOrders.reduce(
@@ -705,7 +948,10 @@ export function computeAdminOverviewMetrics(
   const processingCount = orders.filter(
     (o) => o.orderStatus === 'processing' || o.orderStatus === 'packed',
   ).length;
-  const lowStockCount = getLowStockVariants().length;
+  const lowStockCount = getLowStockVariantsFromProducts(
+    products,
+    lowStockThreshold,
+  ).length;
 
   return {
     totalOrders: orders.length,
@@ -775,6 +1021,8 @@ export function buildOrderStatusDistribution(orders: AdminOrderRecord[]): Array<
   percent: number;
 }> {
   const statuses: AdminOrderStatus[] = [
+    'pending',
+    'confirmed',
     'order_received',
     'pending_verification',
     'processing',

@@ -1,22 +1,35 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, X } from 'lucide-react';
+import { Check, Heart, X } from 'lucide-react';
 import { formatPrice } from '../data/fragrances';
 import { LUXURY_EASE } from '../lib/motion';
-import { BottleSize, PerfumeProduct } from '../types/perfume';
+import { BottleSize, CartItem, PerfumeProduct } from '../types/perfume';
 import { LuxuryImage } from './LuxuryImage';
 
 interface ProductQuickViewModalProps {
   product: PerfumeProduct | null;
+  cartItems: CartItem[];
+  isWishlisted: boolean;
   onClose: () => void;
   onAddToCart: (product: PerfumeProduct, size: BottleSize) => void;
+  onToggleWishlist: (product: PerfumeProduct) => void;
   onViewFullDetails?: (product: PerfumeProduct) => void;
+}
+
+function getInitialQuickViewSize(product: PerfumeProduct): BottleSize {
+  const preferred = product.variants.find((v) => v.size === product.defaultSize);
+  if (preferred && preferred.stockCount > 0) return preferred.size;
+  const firstAvailable = product.variants.find((v) => v.stockCount > 0);
+  return (firstAvailable ?? product.variants[0]).size;
 }
 
 export function ProductQuickViewModal({
   product,
+  cartItems,
+  isWishlisted,
   onClose,
   onAddToCart,
+  onToggleWishlist,
   onViewFullDetails,
 }: ProductQuickViewModalProps) {
   const [selectedSize, setSelectedSize] = useState<BottleSize>('100ml');
@@ -24,7 +37,7 @@ export function ProductQuickViewModal({
 
   useEffect(() => {
     if (product) {
-      setSelectedSize(product.defaultSize);
+      setSelectedSize(getInitialQuickViewSize(product));
     }
     setAdded(false);
   }, [product]);
@@ -43,8 +56,24 @@ export function ProductQuickViewModal({
       product.variants[product.variants.length - 1])
     : null;
 
+  const inCartQty =
+    product && activeVariant
+      ? (cartItems.find(
+          (item) =>
+            item.product.id === product.id && item.size === activeVariant.size,
+        )?.quantity ?? 0)
+      : 0;
+  const isVariantAvailable = Boolean(
+    product && product.inStock && activeVariant && activeVariant.stockCount > 0,
+  );
+  const remainingStock =
+    isVariantAvailable && activeVariant
+      ? Math.max(0, activeVariant.stockCount - inCartQty)
+      : 0;
+  const canAdd = isVariantAvailable && remainingStock > 0;
+
   const handleAdd = () => {
-    if (!product || !product.inStock || !activeVariant) return;
+    if (!product || !activeVariant || !canAdd) return;
     onAddToCart(product, activeVariant.size);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1400);
@@ -141,9 +170,11 @@ export function ProductQuickViewModal({
                   <span className="text-xs uppercase tracking-wider text-[#5C434E] block mb-2">
                     Flacon Size
                   </span>
-                  <div className="inline-flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {product.variants.map((variant) => {
                       const active = variant.size === selectedSize;
+                      const variantStocked =
+                        product.inStock && variant.stockCount > 0;
                       return (
                         <button
                           key={variant.size}
@@ -152,10 +183,13 @@ export function ProductQuickViewModal({
                           className={`px-4 py-2 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                             active
                               ? 'bg-[#430F25] text-[#FFF5E9] border-[#C69A50]/60'
-                              : 'bg-[#F8EBDD] text-[#26151D] border-[#C69A50]/30 hover:border-[#430F25]'
+                              : variantStocked
+                                ? 'bg-[#F8EBDD] text-[#26151D] border-[#C69A50]/30 hover:border-[#430F25]'
+                                : 'bg-[#F8EBDD]/50 text-[#5C434E] border-[#C69A50]/20'
                           }`}
                         >
                           {variant.size} · {formatPrice(variant.price)}
+                          {!variantStocked ? ' (Out)' : ''}
                         </button>
                       );
                     })}
@@ -168,7 +202,7 @@ export function ProductQuickViewModal({
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <span className="text-xs text-[#5C434E] block">
-                      Eau de Parfum · {activeVariant.size}
+                      {product.concentration} · {activeVariant.size}
                     </span>
                     <span className="font-serif text-2xl font-semibold text-[#430F25] tabular-nums">
                       {formatPrice(activeVariant.price)}
@@ -177,11 +211,11 @@ export function ProductQuickViewModal({
 
                   <motion.button
                     type="button"
-                    disabled={!product.inStock}
-                    whileTap={product.inStock ? { scale: 0.97 } : undefined}
+                    disabled={!canAdd}
+                    whileTap={canAdd ? { scale: 0.97 } : undefined}
                     onClick={handleAdd}
                     className={`px-6 py-3.5 rounded-lg text-xs font-medium tracking-wide transition-colors inline-flex items-center gap-2 min-h-[44px] border ${
-                      !product.inStock
+                      !canAdd
                         ? 'bg-[#F8EBDD] text-[#5C434E] border-[#C69A50]/30 cursor-not-allowed'
                         : added
                           ? 'bg-[#C69A50] text-[#26151D] border-[#C69A50] cursor-pointer'
@@ -190,27 +224,47 @@ export function ProductQuickViewModal({
                   >
                     {added && <Check className="w-4 h-4" strokeWidth={2} />}
                     <span>
-                      {!product.inStock
+                      {!isVariantAvailable
                         ? 'Out of Stock'
-                        : added
-                          ? 'Added to Bag'
-                          : 'Add to Shopping Bag'}
+                        : remainingStock === 0
+                          ? 'Max Stock in Bag'
+                          : added
+                            ? 'Added to Bag'
+                            : 'Add to Shopping Bag'}
                     </span>
                   </motion.button>
                 </div>
 
-                {onViewFullDetails && (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  {onViewFullDetails && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onViewFullDetails(product);
+                      }}
+                      className="text-xs font-medium text-[#430F25] hover:text-[#C69A50] underline underline-offset-4 transition-colors cursor-pointer"
+                    >
+                      View Full Product Page →
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose();
-                      onViewFullDetails(product);
-                    }}
-                    className="text-xs font-medium text-[#430F25] hover:text-[#C69A50] underline underline-offset-4 transition-colors cursor-pointer"
+                    onClick={() => onToggleWishlist(product)}
+                    aria-pressed={isWishlisted}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#430F25] hover:text-[#C69A50] transition-colors cursor-pointer"
                   >
-                    View Full Product Page →
+                    <Heart
+                      className="w-3.5 h-3.5"
+                      strokeWidth={1.7}
+                      fill={isWishlisted ? 'currentColor' : 'none'}
+                    />
+                    <span>
+                      {isWishlisted ? 'Saved in Wishlist' : 'Save to Wishlist'}
+                    </span>
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </motion.div>

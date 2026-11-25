@@ -13,9 +13,17 @@ interface FooterProps {
   onNavigate: (page: AppPage, sectionId?: string) => void;
   onOpenTrackOrder: () => void;
   onOpenFaq: () => void;
+  onOpenPrivacy: () => void;
+  onOpenTerms: () => void;
 }
 
-export function Footer({ onNavigate, onOpenTrackOrder, onOpenFaq }: FooterProps) {
+export function Footer({
+  onNavigate,
+  onOpenTrackOrder,
+  onOpenFaq,
+  onOpenPrivacy,
+  onOpenTerms,
+}: FooterProps) {
   return (
     <footer
       id="contact"
@@ -199,9 +207,21 @@ export function Footer({ onNavigate, onOpenTrackOrder, onOpenFaq }: FooterProps)
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#FFF5E9]/60">
           <p>© {new Date().getFullYear()} AUREMIST PERFUMERY. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <span>Privacy Policy</span>
+            <button
+              type="button"
+              onClick={onOpenPrivacy}
+              className="hover:text-[#C69A50] transition-colors cursor-pointer"
+            >
+              Privacy Policy
+            </button>
             <span aria-hidden="true">·</span>
-            <span>Terms</span>
+            <button
+              type="button"
+              onClick={onOpenTerms}
+              className="hover:text-[#C69A50] transition-colors cursor-pointer"
+            >
+              Terms
+            </button>
           </div>
         </div>
       </div>

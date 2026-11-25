@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { Check, ShoppingBag, X } from 'lucide-react';
+import { Check, Heart, ShoppingBag, X } from 'lucide-react';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AnnouncementBar } from './components/AnnouncementBar';
 import { AtelierStoryAndFaq } from './components/AtelierStoryAndFaq';
@@ -20,6 +20,7 @@ import { ProductQuickViewModal } from './components/ProductQuickViewModal';
 import { SearchModal } from './components/SearchModal';
 import { ServiceHighlights } from './components/ServiceHighlights';
 import { ShopPage } from './components/ShopPage';
+import { WishlistDrawer } from './components/WishlistDrawer';
 import { ALL_PERFUMES, FEATURED_PERFUMES } from './data/fragrances';
 import {
   getVariantStockCount,
@@ -31,7 +32,9 @@ import {
   loadSessionConfirmedOrder,
   saveSessionConfirmedOrder,
 } from './lib/orderConfirmation';
+import { loadWishlistIds, saveWishlistIds } from './lib/wishlist';
 import { LUXURY_EASE } from './lib/motion';
+import { AdminSection } from './types/admin';
 import {
   AppliedCoupon,
   AppPage,
@@ -42,9 +45,36 @@ import {
   PerfumeProduct,
 } from './types/perfume';
 
+const ADMIN_SECTIONS: AdminSection[] = [
+  'login',
+  'dashboard',
+  'orders',
+  'payment-verification',
+  'products',
+  'inventory',
+  'categories',
+  'coupons',
+  'shipments',
+  'notifications',
+  'reports',
+  'settings',
+];
+
+function resolveAdminSection(path: string): AdminSection {
+  if (path === '/admin' || path === '/admin/') {
+    return 'dashboard';
+  }
+  const sub = path.slice('/admin/'.length).split('/')[0] as AdminSection;
+  if (ADMIN_SECTIONS.includes(sub)) {
+    return sub;
+  }
+  return 'dashboard';
+}
+
 function resolveRouteFromLocation(): {
   page: AppPage;
   product: PerfumeProduct;
+  adminSection: AdminSection;
 } {
   const queryProduct = new URLSearchParams(window.location.search).get(
     'product',
@@ -54,7 +84,7 @@ function resolveRouteFromLocation(): {
       (p) => p.slug === queryProduct || p.id === queryProduct,
     );
     if (matched) {
-      return { page: 'product', product: matched };
+      return { page: 'product', product: matched, adminSection: 'dashboard' };
     }
   }
 
@@ -65,19 +95,27 @@ function resolveRouteFromLocation(): {
     hashPath || window.location.pathname.replace(/\/+$/, '') || '/';
 
   if (path === '/shop') {
-    return { page: 'shop', product: ALL_PERFUMES[0] };
+    return { page: 'shop', product: ALL_PERFUMES[0], adminSection: 'dashboard' };
   }
   if (path === '/cart') {
-    return { page: 'cart', product: ALL_PERFUMES[0] };
+    return { page: 'cart', product: ALL_PERFUMES[0], adminSection: 'dashboard' };
   }
   if (path === '/checkout') {
-    return { page: 'checkout', product: ALL_PERFUMES[0] };
+    return { page: 'checkout', product: ALL_PERFUMES[0], adminSection: 'dashboard' };
   }
   if (path === '/order-confirmation') {
-    return { page: 'order-confirmation', product: ALL_PERFUMES[0] };
+    return {
+      page: 'order-confirmation',
+      product: ALL_PERFUMES[0],
+      adminSection: 'dashboard',
+    };
   }
   if (path === '/admin' || path.startsWith('/admin/')) {
-    return { page: 'admin', product: ALL_PERFUMES[0] };
+    return {
+      page: 'admin',
+      product: ALL_PERFUMES[0],
+      adminSection: resolveAdminSection(path),
+    };
   }
   if (path.startsWith('/perfume/')) {
     const slug = decodeURIComponent(path.slice('/perfume/'.length));
@@ -85,11 +123,11 @@ function resolveRouteFromLocation(): {
       (p) => p.slug === slug || p.id === slug,
     );
     if (matched) {
-      return { page: 'product', product: matched };
+      return { page: 'product', product: matched, adminSection: 'dashboard' };
     }
-    return { page: 'shop', product: ALL_PERFUMES[0] };
+    return { page: 'shop', product: ALL_PERFUMES[0], adminSection: 'dashboard' };
   }
-  return { page: 'home', product: ALL_PERFUMES[0] };
+  return { page: 'home', product: ALL_PERFUMES[0], adminSection: 'dashboard' };
 }
 
 export default function App() {
@@ -97,6 +135,9 @@ export default function App() {
   const initialCart = useRef(loadGuestCart()).current;
 
   const [currentPage, setCurrentPage] = useState<AppPage>(initialRoute.page);
+  const [adminSection, setAdminSection] = useState<AdminSection>(
+    initialRoute.adminSection,
+  );
   const [selectedProduct, setSelectedProduct] = useState<PerfumeProduct>(
     initialRoute.product,
   );
@@ -107,14 +148,21 @@ export default function App() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
     initialCart.appliedCoupon,
   );
+  const [wishlistIds, setWishlistIds] = useState<string[]>(() =>
+    loadWishlistIds(),
+  );
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] =
     useState<PerfumeProduct | null>(null);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
   const [confirmedOrder, setConfirmedOrder] =
     useState<CheckoutOrderPreview | null>(() => loadSessionConfirmedOrder());
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastState, setToastState] = useState<{
+    message: string;
+    action?: 'cart' | 'wishlist';
+  } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -122,9 +170,14 @@ export default function App() {
   }, [cartItems, giftWrap, appliedCoupon]);
 
   useEffect(() => {
+    saveWishlistIds(wishlistIds);
+  }, [wishlistIds]);
+
+  useEffect(() => {
     const syncFromLocation = () => {
       const next = resolveRouteFromLocation();
       setCurrentPage(next.page);
+      setAdminSection(next.adminSection);
       setSelectedProduct(next.product);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -140,29 +193,68 @@ export default function App() {
   }, []);
 
   const totalCartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const wishlistProducts = ALL_PERFUMES.filter((p) =>
+    wishlistIds.includes(p.id),
+  );
 
-  const showConfirmation = (message: string) => {
-    setToastMessage(message);
+  const showConfirmation = (
+    message: string,
+    action?: 'cart' | 'wishlist',
+  ) => {
+    setToastState({ message, action });
     if (toastTimerRef.current) {
       window.clearTimeout(toastTimerRef.current);
     }
     toastTimerRef.current = window.setTimeout(() => {
-      setToastMessage(null);
+      setToastState(null);
     }, 3400);
+  };
+
+  const handleToggleWishlist = (product: PerfumeProduct) => {
+    const exists = wishlistIds.includes(product.id);
+    if (exists) {
+      setWishlistIds((prev) => prev.filter((id) => id !== product.id));
+      showConfirmation(
+        `${product.name} removed from your wishlist.`,
+        'wishlist',
+      );
+      return;
+    }
+    setWishlistIds((prev) => [product.id, ...prev]);
+    showConfirmation(`${product.name} saved to your wishlist.`, 'wishlist');
+  };
+
+  const handleRemoveWishlistItem = (productId: string) => {
+    setWishlistIds((prev) => prev.filter((id) => id !== productId));
+  };
+
+  const handleClearWishlist = () => {
+    setWishlistIds([]);
   };
 
   const handleAddToCart = (
     product: PerfumeProduct,
-    size: BottleSize = product.defaultSize,
+    size?: BottleSize,
     quantity = 1,
   ) => {
-    if (!product.inStock) return;
+    if (!product.inStock) {
+      showConfirmation(`${product.name} is currently out of stock.`);
+      return;
+    }
 
-    const variant =
-      product.variants.find((v) => v.size === size && v.stockCount > 0) ??
-      product.variants.find((v) => v.stockCount > 0);
+    const explicitSizeRequested = size !== undefined;
+    const variant = explicitSizeRequested
+      ? product.variants.find((v) => v.size === size)
+      : (product.variants.find(
+          (v) => v.size === product.defaultSize && v.stockCount > 0,
+        ) ?? product.variants.find((v) => v.stockCount > 0));
 
-    if (!variant) return;
+    if (!variant || variant.stockCount <= 0) {
+      showConfirmation(
+        `${product.name}${size ? ` (${size})` : ''} is currently out of stock.`,
+      );
+      return;
+    }
 
     const existingItem = cartItems.find(
       (item) => item.product.id === product.id && item.size === variant.size,
@@ -173,6 +265,7 @@ export default function App() {
     if (remainingStock <= 0) {
       showConfirmation(
         `Maximum available stock (${variant.stockCount}) already in bag for ${product.name} (${variant.size}).`,
+        'cart',
       );
       return;
     }
@@ -214,6 +307,7 @@ export default function App() {
     const qtyLabel = addedQuantity > 1 ? `${addedQuantity} × ` : '';
     showConfirmation(
       `${qtyLabel}${product.name} (${variant.size}) added to your shopping bag.`,
+      'cart',
     );
   };
 
@@ -273,9 +367,14 @@ export default function App() {
     setAppliedCoupon(null);
   };
 
-  const pushRoutePath = (nextPath: string) => {
-    if (window.location.pathname !== nextPath) {
-      window.history.pushState({}, '', nextPath);
+  const pushRoutePath = (nextPath: string, replace = false) => {
+    const currentFull = `${window.location.pathname}${window.location.hash}`;
+    if (currentFull !== nextPath) {
+      if (replace) {
+        window.history.replaceState({}, '', nextPath);
+      } else {
+        window.history.pushState({}, '', nextPath);
+      }
     }
   };
 
@@ -307,7 +406,7 @@ export default function App() {
     }
 
     if (page === 'admin') {
-      pushRoutePath('/admin');
+      pushRoutePath(`/admin/${adminSection}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -322,7 +421,7 @@ export default function App() {
             const targetEl = document.getElementById(sectionId);
             targetEl?.scrollIntoView({ behavior: 'smooth' });
           }
-        }, 40);
+        }, 90);
         return;
       }
     }
@@ -347,10 +446,24 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleNavigateAdminSection = (
+    section: AdminSection,
+    options?: { replace?: boolean },
+  ) => {
+    setCurrentPage('admin');
+    setAdminSection(section);
+    pushRoutePath(`/admin/${section}`, options?.replace ?? false);
+    if (!options?.replace) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   if (currentPage === 'admin') {
     return (
       <MotionConfig reducedMotion="user">
         <AdminDashboard
+          activeSection={adminSection}
+          onNavigateSection={handleNavigateAdminSection}
           onReturnToStorefront={() => handleNavigate('home', 'home')}
         />
       </MotionConfig>
@@ -366,8 +479,10 @@ export default function App() {
           <Navbar
             currentPage={currentPage}
             cartCount={totalCartCount}
+            wishlistCount={wishlistIds.length}
             onNavigate={handleNavigate}
             onOpenSearch={() => setIsSearchOpen(true)}
+            onOpenWishlist={() => setIsWishlistOpen(true)}
             onOpenAccount={() => setInfoModal('account')}
             onOpenCart={() => setIsCartOpen(true)}
             onOpenFaq={() => setInfoModal('faq')}
@@ -384,9 +499,11 @@ export default function App() {
               <FeaturedCollection
                 products={FEATURED_PERFUMES}
                 selectedCategory={selectedCategory}
+                wishlistIds={wishlistIds}
                 onSelectCategory={setSelectedCategory}
                 onAddToCart={handleAddToCart}
                 onSelectProduct={handleOpenProductDetail}
+                onToggleWishlist={handleToggleWishlist}
               />
 
               <LuxuryGiftBanner
@@ -404,9 +521,11 @@ export default function App() {
           {currentPage === 'shop' && (
             <ShopPage
               products={ALL_PERFUMES}
+              wishlistIds={wishlistIds}
               onNavigateHome={() => handleNavigate('home', 'home')}
               onViewDetails={handleOpenProductDetail}
               onAddToCart={handleAddToCart}
+              onToggleWishlist={handleToggleWishlist}
             />
           )}
 
@@ -415,11 +534,13 @@ export default function App() {
               product={selectedProduct}
               allProducts={ALL_PERFUMES}
               cartItems={cartItems}
+              isWishlisted={wishlistIds.includes(selectedProduct.id)}
               onNavigateHome={() => handleNavigate('home', 'home')}
               onNavigateShop={() => handleNavigate('shop')}
               onViewDetails={handleOpenProductDetail}
               onOpenCart={() => handleNavigate('cart')}
               onAddToCart={handleAddToCart}
+              onToggleWishlist={handleToggleWishlist}
             />
           )}
 
@@ -470,12 +591,14 @@ export default function App() {
             onNavigate={handleNavigate}
             onOpenTrackOrder={() => setInfoModal('track-order')}
             onOpenFaq={() => setInfoModal('faq')}
+            onOpenPrivacy={() => setInfoModal('privacy')}
+            onOpenTerms={() => setInfoModal('terms')}
           />
         </div>
 
-        {/* Cart Confirmation Toast */}
+        {/* Cart & Wishlist Confirmation Toast */}
         <AnimatePresence>
-          {toastMessage && (
+          {toastState && (
             <motion.div
               role="status"
               aria-live="polite"
@@ -488,21 +611,36 @@ export default function App() {
               <span className="w-6 h-6 rounded-full bg-[#C69A50] text-[#26151D] flex items-center justify-center shrink-0">
                 <Check className="w-3.5 h-3.5" strokeWidth={2.2} />
               </span>
-              <p className="text-xs leading-snug flex-1">{toastMessage}</p>
+              <p className="text-xs leading-snug flex-1">{toastState.message}</p>
+              {toastState.action === 'cart' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setToastState(null);
+                    handleNavigate('cart');
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C69A50] hover:text-[#FFF5E9] whitespace-nowrap cursor-pointer underline underline-offset-4"
+                >
+                  <ShoppingBag className="w-3 h-3" strokeWidth={1.7} />
+                  <span>View Cart</span>
+                </button>
+              )}
+              {toastState.action === 'wishlist' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setToastState(null);
+                    setIsWishlistOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C69A50] hover:text-[#FFF5E9] whitespace-nowrap cursor-pointer underline underline-offset-4"
+                >
+                  <Heart className="w-3 h-3" strokeWidth={1.7} />
+                  <span>View Wishlist</span>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  setToastMessage(null);
-                  handleNavigate('cart');
-                }}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C69A50] hover:text-[#FFF5E9] whitespace-nowrap cursor-pointer underline underline-offset-4"
-              >
-                <ShoppingBag className="w-3 h-3" strokeWidth={1.7} />
-                <span>View Cart</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setToastMessage(null)}
+                onClick={() => setToastState(null)}
                 aria-label="Dismiss notification"
                 className="p-1 text-[#FFF5E9]/70 hover:text-[#FFF5E9] cursor-pointer"
               >
@@ -526,10 +664,26 @@ export default function App() {
           onRemoveItem={handleRemoveItem}
         />
 
+        <WishlistDrawer
+          isOpen={isWishlistOpen}
+          products={wishlistProducts}
+          onClose={() => setIsWishlistOpen(false)}
+          onExploreShop={() => handleNavigate('shop')}
+          onViewProduct={handleOpenProductDetail}
+          onAddToCart={(product) => handleAddToCart(product)}
+          onRemoveItem={handleRemoveWishlistItem}
+          onClearWishlist={handleClearWishlist}
+        />
+
         <ProductQuickViewModal
           product={quickViewProduct}
+          cartItems={cartItems}
+          isWishlisted={
+            quickViewProduct ? wishlistIds.includes(quickViewProduct.id) : false
+          }
           onClose={() => setQuickViewProduct(null)}
           onAddToCart={handleAddToCart}
+          onToggleWishlist={handleToggleWishlist}
           onViewFullDetails={handleOpenProductDetail}
         />
 

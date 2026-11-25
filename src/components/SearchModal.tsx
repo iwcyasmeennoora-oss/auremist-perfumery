@@ -42,6 +42,7 @@ export function SearchModal({
           p.fragranceFamily.toLowerCase().includes(q) ||
           p.audienceCategory.toLowerCase().includes(q) ||
           p.category.toLowerCase().includes(q) ||
+          p.concentration.toLowerCase().includes(q) ||
           p.notes.some((note) => note.toLowerCase().includes(q)),
       )
     : products;
@@ -129,6 +130,7 @@ export function SearchModal({
                       </div>
                       <p className="text-xs text-[#5C434E] truncate">
                         {product.notes.join(' · ')}
+                        {!product.inStock ? ' · Out of Stock' : ''}
                       </p>
                     </div>
                   </button>

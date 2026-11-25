@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { HelpCircle, Package, Sparkles, User, X } from 'lucide-react';
+import { FileText, HelpCircle, Package, ShieldCheck, Sparkles, User, X } from 'lucide-react';
 import { FAQ_ITEMS } from '../data/fragrances';
 import { LUXURY_EASE } from '../lib/motion';
 
@@ -9,6 +9,8 @@ export type InfoModalType =
   | 'track-order'
   | 'story'
   | 'faq'
+  | 'privacy'
+  | 'terms'
   | null;
 
 interface InfoModalProps {
@@ -56,6 +58,20 @@ export function InfoModal({ type, onClose, onExploreShop }: InfoModalProps) {
           title: 'Frequently Asked Questions',
           body: '',
           cta: 'Shop Collection',
+        },
+        privacy: {
+          icon: ShieldCheck,
+          kicker: 'Client Privacy',
+          title: 'Privacy Policy',
+          body: 'Shopping bag and wishlist preferences in this frontend preview are stored locally in your browser. Checkout details and wallet payment screenshots are processed privately and will be protected by server-side access controls once backend services connect.',
+          cta: 'Close Policy',
+        },
+        terms: {
+          icon: FileText,
+          kicker: 'Boutique Terms',
+          title: 'Terms of Service',
+          body: 'All AUREMIST PERFUMERY fragrances are listed in PKR. Unopened, sealed bottles qualify for 30-day returns or exchanges. Final pricing, coupon validity, stock allocation, and regional shipping charges are confirmed by backend order processing.',
+          cta: 'Close Terms',
         },
       }[type]
     : null;

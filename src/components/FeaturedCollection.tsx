@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, Plus } from 'lucide-react';
+import { Check, Heart, Plus } from 'lucide-react';
 import { formatPrice, FRAGRANCE_CATEGORIES } from '../data/fragrances';
 import {
   fadeUpVariants,
@@ -15,17 +15,21 @@ import { LuxuryImage } from './LuxuryImage';
 interface FeaturedCollectionProps {
   products: PerfumeProduct[];
   selectedCategory: FragranceCategory;
+  wishlistIds: string[];
   onSelectCategory: (category: FragranceCategory) => void;
   onAddToCart: (product: PerfumeProduct, size?: BottleSize) => void;
   onSelectProduct: (product: PerfumeProduct) => void;
+  onToggleWishlist: (product: PerfumeProduct) => void;
 }
 
 export function FeaturedCollection({
   products,
   selectedCategory,
+  wishlistIds,
   onSelectCategory,
   onAddToCart,
   onSelectProduct,
+  onToggleWishlist,
 }: FeaturedCollectionProps) {
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
 
@@ -35,6 +39,7 @@ export function FeaturedCollection({
       : products.filter((item) => item.category === selectedCategory);
 
   const handleQuickAdd = (product: PerfumeProduct) => {
+    if (!product.inStock) return;
     onAddToCart(product, product.defaultSize);
     setRecentlyAddedId(product.id);
     window.setTimeout(() => {
@@ -110,6 +115,7 @@ export function FeaturedCollection({
           <AnimatePresence mode="popLayout">
             {visibleProducts.map((product) => {
               const isAdded = recentlyAddedId === product.id;
+              const isWishlisted = wishlistIds.includes(product.id);
               return (
                 <motion.article
                   key={product.id}
@@ -123,19 +129,43 @@ export function FeaturedCollection({
                   className="group flex flex-col justify-between rounded-xl bg-[#FFF5E9] border border-[#C69A50]/30 transition-shadow duration-300 hover:border-[#C69A50]/80 hover:shadow-[0_18px_38px_-18px_rgba(67,15,37,0.22)] overflow-hidden"
                 >
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => onSelectProduct(product)}
-                      className="relative block w-full aspect-[3/4] overflow-hidden bg-[#FFF5E9] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#430F25]"
-                      aria-label={`View fragrance details for ${product.name}`}
-                    >
-                      <LuxuryImage
-                        src={product.image}
-                        alt={`${product.name} by AUREMIST Eau de Parfum bottle`}
-                        fallbackTitle={product.name}
-                        className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-                      />
-                    </button>
+                    <div className="relative w-full aspect-[3/4] overflow-hidden bg-[#FFF5E9]">
+                      <button
+                        type="button"
+                        onClick={() => onSelectProduct(product)}
+                        className="block w-full h-full text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#430F25]"
+                        aria-label={`View fragrance details for ${product.name}`}
+                      >
+                        <LuxuryImage
+                          src={product.image}
+                          alt={`${product.name} by AUREMIST Eau de Parfum bottle`}
+                          fallbackTitle={product.name}
+                          className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                        />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onToggleWishlist(product)}
+                        aria-pressed={isWishlisted}
+                        aria-label={
+                          isWishlisted
+                            ? `Remove ${product.name} from wishlist`
+                            : `Save ${product.name} to wishlist`
+                        }
+                        className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-full border flex items-center justify-center transition-colors cursor-pointer shadow-sm ${
+                          isWishlisted
+                            ? 'bg-[#430F25] text-[#C69A50] border-[#C69A50]'
+                            : 'bg-[#FFF5E9]/90 text-[#430F25] border-[#C69A50]/45 hover:bg-[#FFF5E9] hover:border-[#430F25]'
+                        }`}
+                      >
+                        <Heart
+                          className="w-4 h-4"
+                          strokeWidth={1.7}
+                          fill={isWishlisted ? 'currentColor' : 'none'}
+                        />
+                      </button>
+                    </div>
 
                     <div className="p-5 pb-4">
                       <span className="text-[11px] tracking-[0.16em] uppercase text-[#C69A50] font-semibold block mb-1">
@@ -161,15 +191,20 @@ export function FeaturedCollection({
 
                     <motion.button
                       type="button"
-                      whileTap={{ scale: 0.96 }}
+                      disabled={!product.inStock}
+                      whileTap={product.inStock ? { scale: 0.96 } : undefined}
                       onClick={() => handleQuickAdd(product)}
-                      className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium tracking-wide transition-colors duration-200 whitespace-nowrap shrink-0 cursor-pointer min-h-[38px] border ${
-                        isAdded
-                          ? 'bg-[#C69A50] text-[#26151D] border-[#C69A50]'
-                          : 'bg-[#430F25] text-[#FFF5E9] border-[#C69A50]/45 hover:bg-[#2B0817]'
+                      className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium tracking-wide transition-colors duration-200 whitespace-nowrap shrink-0 min-h-[38px] border ${
+                        !product.inStock
+                          ? 'bg-[#F8EBDD]/60 text-[#5C434E]/75 border-[#C69A50]/25 cursor-not-allowed'
+                          : isAdded
+                            ? 'bg-[#C69A50] text-[#26151D] border-[#C69A50] cursor-pointer'
+                            : 'bg-[#430F25] text-[#FFF5E9] border-[#C69A50]/45 hover:bg-[#2B0817] cursor-pointer'
                       } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C69A50]`}
                     >
-                      {isAdded ? (
+                      {!product.inStock ? (
+                        <span>Out of Stock</span>
+                      ) : isAdded ? (
                         <>
                           <Check className="w-3.5 h-3.5" strokeWidth={2} />
                           <span>Added</span>

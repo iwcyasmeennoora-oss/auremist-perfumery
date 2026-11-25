@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Eye,
   EyeOff,
   Info,
@@ -36,7 +37,7 @@ export function AdminLoginPage({
     const nextErrors: { email?: string; password?: string; form?: string } = {};
 
     if (!trimmedEmail) {
-      nextErrors.email = 'Please enter your admin email address.';
+      nextErrors.email = 'Please enter your email address.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
       nextErrors.email = 'Please enter a valid email address.';
     }
@@ -45,12 +46,12 @@ export function AdminLoginPage({
       nextErrors.password = 'Please enter your password.';
     } else if (password.length < 8) {
       nextErrors.password =
-        'Password must be at least 8 characters to preview the dashboard.';
+        'Password must be at least 8 characters to continue.';
     }
 
     if (Object.keys(nextErrors).length > 0) {
       nextErrors.form =
-        'Please correct the highlighted fields before signing in.';
+        'Please review the highlighted fields before signing in.';
       setErrors(nextErrors);
       return;
     }
@@ -58,13 +59,24 @@ export function AdminLoginPage({
     setErrors({});
     onSignIn({
       email: trimmedEmail,
+      displayName: trimmedEmail.split('@')[0] || 'Boutique Manager',
+      signedInAt: new Date().toISOString(),
+      isDemoUiSession: true,
+    });
+  };
+
+  const handleDemoQuickAccess = () => {
+    setErrors({});
+    onSignIn({
+      email: 'demo-preview@auremist.local',
+      displayName: 'Demo Store Owner',
       signedInAt: new Date().toISOString(),
       isDemoUiSession: true,
     });
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF5E9] text-[#26151D] flex flex-col justify-between px-4 py-8 sm:px-8">
+    <div className="min-h-screen bg-[#F8F0E7] text-[#26151D] flex flex-col justify-between px-4 py-8 sm:px-8">
       <div className="max-w-md w-full mx-auto">
         <button
           type="button"
@@ -72,7 +84,7 @@ export function AdminLoginPage({
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[#351522] hover:text-[#8C6526] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.7} />
-          <span>Return to Public Storefront</span>
+          <span>Back to Store</span>
         </button>
       </div>
 
@@ -80,40 +92,40 @@ export function AdminLoginPage({
         variants={fadeUpVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-md w-full mx-auto my-8 rounded-xl bg-[#F8F0E7] border border-[#D6AD72]/50 p-7 sm:p-9 space-y-6"
+        className="max-w-md w-full mx-auto my-8 rounded-xl bg-[#FFF5E9] border border-[#D6AD72]/55 p-7 sm:p-9 space-y-6"
       >
         <div className="text-center space-y-2 pb-5 border-b border-[#D6AD72]/30">
           <div className="inline-flex items-center justify-center gap-2.5 mb-1">
             <FloralEmblem className="w-6 h-6 text-[#D6AD72]" />
             <span className="font-serif text-2xl font-semibold tracking-[0.18em] text-[#351522]">
-              AUREMIST
+              AUREMIST PERFUMERY
             </span>
           </div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-[#8C6526] font-semibold">
-            Store Owner Portal
+            Administration Console
           </p>
           <h1 className="font-serif text-3xl sm:text-4xl font-medium text-[#351522]">
-            Admin Sign In
+            Admin Login
           </h1>
           <p className="text-xs text-[#5C434E] leading-relaxed">
-            Access order management, payment verification review, and store
-            operations.
+            Sign in to manage orders, wallet payment verification, catalog
+            variants, inventory, coupons, and shipments.
           </p>
         </div>
 
-        {/* Honest Frontend-Only UI Notice */}
-        <div className="p-3.5 rounded-lg bg-[#FFF5E9] border border-[#D6AD72]/50 flex items-start gap-2.5 text-xs text-[#26151D]">
+        {/* Honest Frontend-Only Auth Notice */}
+        <div className="p-3.5 rounded-lg bg-[#F8F0E7] border border-[#D6AD72]/50 flex items-start gap-2.5 text-xs text-[#26151D]">
           <Info
             className="w-4 h-4 text-[#8C6526] shrink-0 mt-0.5"
             strokeWidth={1.8}
           />
           <p className="leading-relaxed">
             <strong className="font-semibold text-[#351522]">
-              Frontend UI Preview Only:
+              Frontend-Only Demo Authentication:
             </strong>{' '}
-            Backend authentication is not connected yet. Real credential
-            verification and session cookies will be enforced on the server when
-            connected.
+            Backend authentication is not connected yet. No real administrator
+            credentials exist in frontend code, and real credential checking
+            will be enforced on the server when connected.
           </p>
         </div>
 
@@ -133,7 +145,7 @@ export function AdminLoginPage({
               htmlFor="admin-login-email"
               className="block text-xs font-medium text-[#351522] mb-1.5"
             >
-              Admin Email Address
+              Email Address
             </label>
             <input
               id="admin-login-email"
@@ -150,8 +162,8 @@ export function AdminLoginPage({
                   }));
                 }
               }}
-              placeholder="owner@auremist.com"
-              className={`w-full px-3.5 py-2.5 rounded-lg bg-[#FFF5E9] border text-sm text-[#26151D] placeholder:text-[#5C434E]/60 focus:outline-none ${
+              placeholder="you@domain.com"
+              className={`w-full px-3.5 py-2.5 rounded-lg bg-[#F8F0E7]/65 border text-sm text-[#26151D] placeholder:text-[#5C434E]/60 focus:outline-none focus:bg-[#FFF5E9] ${
                 errors.email
                   ? 'border-[#7A1D38]'
                   : 'border-[#D6AD72]/60 focus:border-[#351522]'
@@ -185,8 +197,8 @@ export function AdminLoginPage({
                     }));
                   }
                 }}
-                placeholder="Enter password (min. 8 characters)"
-                className={`w-full pl-3.5 pr-11 py-2.5 rounded-lg bg-[#FFF5E9] border text-sm text-[#26151D] placeholder:text-[#5C434E]/60 focus:outline-none ${
+                placeholder="Minimum 8 characters"
+                className={`w-full pl-3.5 pr-11 py-2.5 rounded-lg bg-[#F8F0E7]/65 border text-sm text-[#26151D] placeholder:text-[#5C434E]/60 focus:outline-none focus:bg-[#FFF5E9] ${
                   errors.password
                     ? 'border-[#7A1D38]'
                     : 'border-[#D6AD72]/60 focus:border-[#351522]'
@@ -217,13 +229,27 @@ export function AdminLoginPage({
             className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg bg-[#351522] text-[#FFF5E9] border border-[#D6AD72] text-sm font-medium tracking-wide hover:bg-[#240D16] transition-colors cursor-pointer min-h-[46px]"
           >
             <Lock className="w-4 h-4 text-[#D6AD72]" strokeWidth={1.7} />
-            <span>Sign In to Admin Workspace</span>
+            <span>Login</span>
           </motion.button>
         </form>
+
+        <div className="pt-4 border-t border-[#D6AD72]/25 space-y-2.5 text-center">
+          <p className="text-[11px] text-[#5C434E]">
+            Previewing the UI without entering credentials?
+          </p>
+          <button
+            type="button"
+            onClick={handleDemoQuickAccess}
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#F8F0E7] border border-[#D6AD72]/65 text-xs font-medium text-[#351522] hover:border-[#351522] transition-colors cursor-pointer min-h-[40px]"
+          >
+            <span>Open Frontend Demo Dashboard</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#8C6526]" strokeWidth={1.7} />
+          </button>
+        </div>
       </motion.div>
 
       <p className="max-w-md w-full mx-auto text-center text-[11px] text-[#5C434E]">
-        AUREMIST PERFUMERY · Private Operations Interface (Frontend Demo)
+        AUREMIST PERFUMERY · /admin/login (Frontend UI Preview)
       </p>
     </div>
   );

@@ -4,6 +4,7 @@ import {
   ArrowUpDown,
   Check,
   ChevronRight,
+  Heart,
   Plus,
   RotateCcw,
   Search,
@@ -35,16 +36,20 @@ import { LuxuryImage } from './LuxuryImage';
 
 interface ShopPageProps {
   products: PerfumeProduct[];
+  wishlistIds: string[];
   onNavigateHome: () => void;
   onViewDetails: (product: PerfumeProduct) => void;
   onAddToCart: (product: PerfumeProduct, size?: BottleSize) => void;
+  onToggleWishlist: (product: PerfumeProduct) => void;
 }
 
 export function ShopPage({
   products,
+  wishlistIds,
   onNavigateHome,
   onViewDetails,
   onAddToCart,
+  onToggleWishlist,
 }: ShopPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<AudienceCategory[]>([]);
@@ -236,6 +241,8 @@ export function ShopPage({
       if (q) {
         const matchesSearch =
           product.name.toLowerCase().includes(q) ||
+          product.category.toLowerCase().includes(q) ||
+          product.concentration.toLowerCase().includes(q) ||
           product.fragranceFamily.toLowerCase().includes(q) ||
           product.audienceCategory.toLowerCase().includes(q) ||
           product.subtitle.toLowerCase().includes(q) ||
@@ -300,6 +307,8 @@ export function ShopPage({
       if (q) {
         const matchesSearch =
           product.name.toLowerCase().includes(q) ||
+          product.category.toLowerCase().includes(q) ||
+          product.concentration.toLowerCase().includes(q) ||
           product.fragranceFamily.toLowerCase().includes(q) ||
           product.audienceCategory.toLowerCase().includes(q) ||
           product.subtitle.toLowerCase().includes(q) ||
@@ -1106,6 +1115,7 @@ export function ShopPage({
                 <AnimatePresence mode="popLayout">
                   {filteredAndSortedProducts.map((product) => {
                     const isAdded = recentlyAddedId === product.id;
+                    const isWishlisted = wishlistIds.includes(product.id);
                     const availableSizesText = product.variants
                       .map((v) => v.size)
                       .join(' · ');
@@ -1127,21 +1137,45 @@ export function ShopPage({
                         className="group flex flex-col justify-between rounded-xl bg-[#FFF5E9] border border-[#C69A50]/30 transition-shadow duration-300 hover:border-[#C69A50]/80 hover:shadow-[0_18px_38px_-18px_rgba(67,15,37,0.22)] overflow-hidden"
                       >
                         <div>
-                          <button
-                            type="button"
-                            onClick={() => onViewDetails(product)}
-                            className="relative block w-full aspect-[3/4] overflow-hidden bg-[#F8EBDD] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#430F25]"
-                            aria-label={`View details for ${product.name}`}
-                          >
-                            <LuxuryImage
-                              src={product.image}
-                              alt={`${product.name} by AUREMIST Eau de Parfum`}
-                              fallbackTitle={product.name}
-                              className={`w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04] ${
-                                !product.inStock ? 'opacity-80' : ''
+                          <div className="relative w-full aspect-[3/4] overflow-hidden bg-[#F8EBDD]">
+                            <button
+                              type="button"
+                              onClick={() => onViewDetails(product)}
+                              className="block w-full h-full text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#430F25]"
+                              aria-label={`View details for ${product.name}`}
+                            >
+                              <LuxuryImage
+                                src={product.image}
+                                alt={`${product.name} by AUREMIST Eau de Parfum`}
+                                fallbackTitle={product.name}
+                                className={`w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04] ${
+                                  !product.inStock ? 'opacity-80' : ''
+                                }`}
+                              />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => onToggleWishlist(product)}
+                              aria-pressed={isWishlisted}
+                              aria-label={
+                                isWishlisted
+                                  ? `Remove ${product.name} from wishlist`
+                                  : `Save ${product.name} to wishlist`
+                              }
+                              className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-full border flex items-center justify-center transition-colors cursor-pointer shadow-sm ${
+                                isWishlisted
+                                  ? 'bg-[#430F25] text-[#C69A50] border-[#C69A50]'
+                                  : 'bg-[#FFF5E9]/90 text-[#430F25] border-[#C69A50]/45 hover:bg-[#FFF5E9] hover:border-[#430F25]'
                               }`}
-                            />
-                          </button>
+                            >
+                              <Heart
+                                className="w-4 h-4"
+                                strokeWidth={1.7}
+                                fill={isWishlisted ? 'currentColor' : 'none'}
+                              />
+                            </button>
+                          </div>
 
                           <div className="p-5 pb-4">
                             <div className="flex items-center justify-between gap-2 mb-1.5">

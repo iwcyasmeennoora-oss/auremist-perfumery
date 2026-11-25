@@ -33,6 +33,8 @@ interface AdminOrderDetailModalProps {
 }
 
 const ALL_ORDER_STATUSES: AdminOrderStatus[] = [
+  'pending',
+  'confirmed',
   'order_received',
   'pending_verification',
   'processing',
@@ -46,6 +48,7 @@ const ALL_ORDER_STATUSES: AdminOrderStatus[] = [
 const ALL_PAYMENT_STATUSES: AdminPaymentStatus[] = [
   'pay_on_delivery',
   'awaiting_verification',
+  'reupload_requested',
   'verified',
   'rejected',
 ];
@@ -312,6 +315,11 @@ export function AdminOrderDetailModal({
                         Payment screenshot stored privately; signed admin download
                         activates once backend storage is connected.
                       </span>
+                    </p>
+                  )}
+                  {order.internalPaymentNote && (
+                    <p className="text-[11px] text-[#351522] pt-1">
+                      <strong>Internal Note:</strong> {order.internalPaymentNote}
                     </p>
                   )}
                 </div>

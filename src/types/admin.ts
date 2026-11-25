@@ -1,8 +1,29 @@
-import { BottleSize, PaymentMethodType } from './perfume';
+import {
+  AudienceCategory,
+  BottleSize,
+  ConcentrationType,
+  FragranceCategory,
+  FragranceFamily,
+  PaymentMethodType,
+} from './perfume';
 
-export type AdminSection = 'overview' | 'orders' | 'inventory';
+export type AdminSection =
+  | 'login'
+  | 'dashboard'
+  | 'orders'
+  | 'payment-verification'
+  | 'products'
+  | 'inventory'
+  | 'categories'
+  | 'coupons'
+  | 'shipments'
+  | 'notifications'
+  | 'reports'
+  | 'settings';
 
 export type AdminOrderStatus =
+  | 'pending'
+  | 'confirmed'
   | 'order_received'
   | 'pending_verification'
   | 'processing'
@@ -16,7 +37,8 @@ export type AdminPaymentStatus =
   | 'pay_on_delivery'
   | 'awaiting_verification'
   | 'verified'
-  | 'rejected';
+  | 'rejected'
+  | 'reupload_requested';
 
 export interface AdminOrderLineItem {
   productId: string;
@@ -56,6 +78,12 @@ export interface AdminOrderRecord {
   orderStatus: AdminOrderStatus;
   transactionRefId?: string;
   hasPrivateProof?: boolean;
+  proofFileName?: string;
+  paymentReviewNote?: string;
+  internalPaymentNote?: string;
+  courierName?: string;
+  trackingCode?: string;
+  dispatchedAt?: string;
   isDemoRecord: true;
 }
 
@@ -65,11 +93,95 @@ export interface AdminActivityEntry {
   title: string;
   detail: string;
   orderNumber?: string;
-  kind: 'order' | 'payment' | 'fulfillment' | 'inventory';
+  kind: 'order' | 'payment' | 'fulfillment' | 'inventory' | 'system';
+}
+
+export interface AdminNotificationEntry {
+  id: string;
+  timestamp: string;
+  title: string;
+  message: string;
+  category: 'payment' | 'order' | 'inventory' | 'shipment' | 'cancelled';
+  unread: boolean;
+  targetSection: Exclude<AdminSection, 'login'>;
+  relatedOrderId?: string;
+}
+
+export interface AdminProductVariantRow {
+  size: BottleSize;
+  price: number;
+  originalPrice?: number;
+  sku: string;
+  stockCount: number;
+}
+
+export interface AdminProductRecord {
+  id: string;
+  name: string;
+  subtitle: string;
+  category: string;
+  audienceCategory: AudienceCategory;
+  fragranceFamily: FragranceFamily;
+  concentration: ConcentrationType;
+  image: string;
+  inStock: boolean;
+  status: 'active' | 'draft';
+  topNotes: string;
+  heartNotes: string;
+  baseNotes: string;
+  variants: AdminProductVariantRow[];
+}
+
+export interface AdminCategoryRecord {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  isActive: boolean;
+  displayOrder: number;
+}
+
+export interface AdminCouponRecord {
+  id: string;
+  code: string;
+  description: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  minOrderPkr: number;
+  usageCount: number;
+  usageLimit: number | null;
+  expiresAt: string;
+  isActive: boolean;
+}
+
+export interface AdminDeliveryZoneSetting {
+  id: string;
+  name: string;
+  region: string;
+  feePkr: number;
+  estimatedWindow: string;
+  active: boolean;
+}
+
+export interface AdminStoreSettings {
+  storeName: string;
+  tagline: string;
+  supportEmail: string;
+  supportPhone: string;
+  atelierAddress: string;
+  currencyLabel: string;
+  walletRecipientNumber: string;
+  walletInstructions: string;
+  codEnabled: boolean;
+  easypaisaEnabled: boolean;
+  jazzcashEnabled: boolean;
+  lowStockThreshold: number;
+  deliveryZones: AdminDeliveryZoneSetting[];
 }
 
 export interface AdminSession {
   email: string;
+  displayName: string;
   signedInAt: string;
   isDemoUiSession: true;
 }

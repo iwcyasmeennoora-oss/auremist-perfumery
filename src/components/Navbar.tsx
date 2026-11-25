@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Menu, Search, ShoppingBag, User, X } from 'lucide-react';
+import { Heart, Menu, Search, ShoppingBag, User, X } from 'lucide-react';
 import { LUXURY_EASE } from '../lib/motion';
 import { AppPage } from '../types/perfume';
 import { FloralEmblem } from './FloralEmblem';
@@ -8,8 +8,10 @@ import { FloralEmblem } from './FloralEmblem';
 interface NavbarProps {
   currentPage: AppPage;
   cartCount: number;
+  wishlistCount: number;
   onNavigate: (page: AppPage, sectionId?: string) => void;
   onOpenSearch: () => void;
+  onOpenWishlist: () => void;
   onOpenAccount: () => void;
   onOpenCart: () => void;
   onOpenFaq: () => void;
@@ -27,8 +29,10 @@ const NAV_LINKS = [
 export function Navbar({
   currentPage,
   cartCount,
+  wishlistCount,
   onNavigate,
   onOpenSearch,
+  onOpenWishlist,
   onOpenAccount,
   onOpenCart,
   onOpenFaq,
@@ -63,10 +67,10 @@ export function Navbar({
           <button
             type="button"
             onClick={() => onNavigate('home', 'home')}
-            className="inline-flex items-center gap-2.5 whitespace-nowrap shrink-0 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
+            className="inline-flex items-center gap-2 sm:gap-2.5 whitespace-nowrap shrink-0 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
           >
-            <FloralEmblem className="w-6 h-6 text-[#C69A50] transition-transform duration-300 group-hover:rotate-12" />
-            <span className="font-serif text-2xl sm:text-[26px] font-semibold tracking-[0.16em] text-[#430F25]">
+            <FloralEmblem className="w-5 h-5 sm:w-6 sm:h-6 text-[#C69A50] transition-transform duration-300 group-hover:rotate-12" />
+            <span className="font-serif text-[19px] sm:text-[26px] font-semibold tracking-[0.12em] sm:tracking-[0.16em] text-[#430F25]">
               AUREMIST
             </span>
           </button>
@@ -109,15 +113,15 @@ export function Navbar({
           })}
         </nav>
 
-        {/* Right: Search, Account & Shopping Bag */}
-        <div className="flex items-center justify-self-end gap-1 sm:gap-2 shrink-0">
+        {/* Right: Search, Wishlist, Account & Shopping Bag */}
+        <div className="flex items-center justify-self-end gap-0.5 sm:gap-1.5 shrink-0">
           <motion.button
             type="button"
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
             onClick={onOpenSearch}
             aria-label="Search fragrances"
-            className="p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
+            className="p-1.5 sm:p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[34px] min-h-[34px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
           >
             <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
           </motion.button>
@@ -126,9 +130,34 @@ export function Navbar({
             type="button"
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
+            onClick={onOpenWishlist}
+            aria-label={`Wishlist with ${wishlistCount} saved fragrances`}
+            className="relative p-1.5 sm:p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[34px] min-h-[34px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
+          >
+            <Heart className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            <AnimatePresence>
+              {wishlistCount > 0 && (
+                <motion.span
+                  key={wishlistCount}
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.6, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: LUXURY_EASE }}
+                  className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#C69A50] text-[#26151D] border border-[#430F25]/25 text-[10px] font-semibold tabular-nums flex items-center justify-center"
+                >
+                  {wishlistCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             onClick={onOpenAccount}
             aria-label="Account"
-            className="p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
+            className="p-1.5 sm:p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[34px] min-h-[34px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
           >
             <User className="w-[18px] h-[18px]" strokeWidth={1.5} />
           </motion.button>
@@ -139,7 +168,7 @@ export function Navbar({
             whileTap={{ scale: 0.94 }}
             onClick={onOpenCart}
             aria-label={`Shopping bag with ${cartCount} items`}
-            className="relative p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
+            className="relative p-1.5 sm:p-2.5 text-[#26151D] hover:text-[#430F25] transition-colors duration-200 min-w-[34px] min-h-[34px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430F25]"
           >
             <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.5} />
             <AnimatePresence>
@@ -150,7 +179,7 @@ export function Navbar({
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.6, opacity: 0 }}
                   transition={{ duration: 0.2, ease: LUXURY_EASE }}
-                  className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-[#430F25] text-[#FFF5E9] border border-[#C69A50]/60 text-[10px] font-medium tabular-nums flex items-center justify-center"
+                  className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-[#430F25] text-[#FFF5E9] border border-[#C69A50]/60 text-[10px] font-medium tabular-nums flex items-center justify-center"
                 >
                   {cartCount}
                 </motion.span>

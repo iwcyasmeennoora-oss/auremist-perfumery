@@ -5,6 +5,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Heart,
   Minus,
   Plus,
   ShoppingBag,
@@ -28,6 +29,7 @@ interface ProductDetailPageProps {
   product: PerfumeProduct;
   allProducts: PerfumeProduct[];
   cartItems: CartItem[];
+  isWishlisted: boolean;
   onNavigateHome: () => void;
   onNavigateShop: () => void;
   onViewDetails: (product: PerfumeProduct) => void;
@@ -37,6 +39,7 @@ interface ProductDetailPageProps {
     size?: BottleSize,
     quantity?: number,
   ) => void;
+  onToggleWishlist: (product: PerfumeProduct) => void;
 }
 
 function getInitialAvailableSize(product: PerfumeProduct): BottleSize {
@@ -52,11 +55,13 @@ export function ProductDetailPage({
   product,
   allProducts,
   cartItems,
+  isWishlisted,
   onNavigateHome,
   onNavigateShop,
   onViewDetails,
   onOpenCart,
   onAddToCart,
+  onToggleWishlist,
 }: ProductDetailPageProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<BottleSize>(() =>
@@ -588,7 +593,7 @@ export function ProductDetailPage({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={onNavigateShop}
@@ -602,6 +607,23 @@ export function ProductDetailPage({
                   className="py-2.5 px-4 rounded-lg border border-[#D6AD72]/50 bg-[#F8F0E7] text-xs font-medium text-[#351522] hover:bg-[#351522] hover:text-[#FFF5E9] transition-colors cursor-pointer min-h-[42px]"
                 >
                   View Cart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleWishlist(product)}
+                  aria-pressed={isWishlisted}
+                  className={`inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg border text-xs font-medium transition-colors cursor-pointer min-h-[42px] ${
+                    isWishlisted
+                      ? 'bg-[#351522] text-[#D6AD72] border-[#D6AD72]'
+                      : 'bg-[#FFF5E9] text-[#351522] border-[#D6AD72]/50 hover:border-[#351522] hover:bg-[#F8F0E7]'
+                  }`}
+                >
+                  <Heart
+                    className="w-3.5 h-3.5"
+                    strokeWidth={1.7}
+                    fill={isWishlisted ? 'currentColor' : 'none'}
+                  />
+                  <span>{isWishlisted ? 'Saved in Wishlist' : 'Save to Wishlist'}</span>
                 </button>
               </div>
             </div>
