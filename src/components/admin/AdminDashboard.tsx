@@ -34,6 +34,11 @@ import {
 } from '../../data/adminDemoData';
 import { LUXURY_EASE } from '../../lib/motion';
 import {
+  loadStoreSettingsFromStorage,
+  loadStoredCheckoutOrders,
+  saveStoreSettingsToStorage,
+} from '../../lib/shipping';
+import {
   AdminActivityEntry,
   AdminCategoryRecord,
   AdminCouponRecord,
@@ -169,7 +174,11 @@ export function AdminDashboard({
   const [ordersSearchExternal, setOrdersSearchExternal] = useState('');
   const [productsSearchExternal, setProductsSearchExternal] = useState('');
 
-  const [orders, setOrders] = useState<AdminOrderRecord[]>(DEMO_ADMIN_ORDERS);
+  const [orders, setOrders] = useState<AdminOrderRecord[]>(() => {
+    const stored = loadStoredCheckoutOrders();
+    const seen = new Set(stored.map((o) => o.orderNumber));
+    return [...stored, ...DEMO_ADMIN_ORDERS.filter((o) => !seen.has(o.orderNumber))];
+  });
   const [products, setProducts] =
     useState<AdminProductRecord[]>(INITIAL_ADMIN_PRODUCTS);
   const [categories, setCategories] = useState<AdminCategoryRecord[]>(
@@ -180,8 +189,8 @@ export function AdminDashboard({
   const [notifications, setNotifications] = useState<AdminNotificationEntry[]>(
     INITIAL_ADMIN_NOTIFICATIONS,
   );
-  const [settings, setSettings] = useState<AdminStoreSettings>(
-    INITIAL_STORE_SETTINGS,
+  const [settings, setSettings] = useState<AdminStoreSettings>(() =>
+    loadStoreSettingsFromStorage(INITIAL_STORE_SETTINGS),
   );
   const [activity, setActivity] =
     useState<AdminActivityEntry[]>(DEMO_ADMIN_ACTIVITY);
@@ -252,12 +261,12 @@ export function AdminDashboard({
       const updates: string[] = [];
       if (patch.orderStatus) {
         updates.push(
-          `Order Status → ${ORDER_STATUS_META[patch.orderStatus].label}`,
+          `Order Status updated to ${ORDER_STATUS_META[patch.orderStatus].label}`,
         );
       }
       if (patch.paymentStatus) {
         updates.push(
-          `Payment Status → ${PAYMENT_STATUS_META[patch.paymentStatus].label}`,
+          `Payment Status updated to ${PAYMENT_STATUS_META[patch.paymentStatus].label}`,
         );
       }
       if (updates.length > 0) {
@@ -445,7 +454,7 @@ export function AdminDashboard({
     if (target) {
       pushActivity({
         title: `Shipment updated for ${target.orderNumber}`,
-        detail: `${courierName}${trackingCode ? ` · ${trackingCode}` : ''} → ${ORDER_STATUS_META[orderStatus].label}`,
+        detail: `${courierName}${trackingCode ? ` · ${trackingCode}` : ''} set to ${ORDER_STATUS_META[orderStatus].label}`,
         orderNumber: target.orderNumber,
         kind: 'fulfillment',
       });
@@ -971,6 +980,7 @@ export function AdminDashboard({
               settings={settings}
               onSaveSettings={(nextSettings) => {
                 setSettings(nextSettings);
+                saveStoreSettingsToStorage(nextSettings);
                 pushActivity({
                   title: 'Updated store settings',
                   detail:

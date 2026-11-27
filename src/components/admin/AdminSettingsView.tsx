@@ -91,7 +91,7 @@ export function AdminSettingsView({
           role="status"
           className="p-3.5 rounded-xl bg-[#F2F7F4] border border-[#1F4E37]/35 flex items-center gap-2 text-xs font-medium text-[#1F4E37]"
         >
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={1.7} />
           <span>Store settings updated in the current admin workspace session.</span>
         </div>
       )}
@@ -271,12 +271,12 @@ export function AdminSettingsView({
                   >
                     {enabled ? (
                       <>
-                        <ToggleRight className="w-4 h-4" />
+                        <ToggleRight className="w-4 h-4" strokeWidth={1.7} />
                         <span>Enabled</span>
                       </>
                     ) : (
                       <>
-                        <ToggleLeft className="w-4 h-4" />
+                        <ToggleLeft className="w-4 h-4" strokeWidth={1.7} />
                         <span>Disabled</span>
                       </>
                     )}
@@ -326,8 +326,7 @@ export function AdminSettingsView({
               Delivery Zones &amp; Shipping Charges
             </h2>
             <p className="text-xs text-[#5C434E]">
-              Add your verified shipping zones and fees below. Default charges
-              are intentionally blank until configured by the store owner.
+              Manage active regional courier zones and PKR shipping rates applied during customer checkout.
             </p>
           </div>
         </div>
@@ -464,7 +463,7 @@ export function AdminSettingsView({
                     aria-label={`Remove ${zone.name}`}
                     className="p-1.5 rounded border border-[#7A1D38]/35 bg-[#FDF3F5] text-[#7A1D38] hover:bg-[#7A1D38] hover:text-[#FFF5E9] cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.6} />
                   </button>
                 </div>
               </div>
@@ -529,7 +528,7 @@ export function AdminSettingsView({
               onClick={handleAddZone}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-[#F8F0E7] border border-[#D6AD72]/60 text-xs font-medium text-[#351522] hover:bg-[#351522] hover:text-[#FFF5E9] shrink-0 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.7} />
               <span>Add</span>
             </button>
           </div>

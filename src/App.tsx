@@ -32,6 +32,7 @@ import {
   loadSessionConfirmedOrder,
   saveSessionConfirmedOrder,
 } from './lib/orderConfirmation';
+import { appendStoredOrderFromCheckout } from './lib/shipping';
 import { loadWishlistIds, saveWishlistIds } from './lib/wishlist';
 import { LUXURY_EASE } from './lib/motion';
 import { AdminSection } from './types/admin';
@@ -438,6 +439,7 @@ export default function App() {
 
   const handleOrderConfirmed = (order: CheckoutOrderPreview) => {
     saveSessionConfirmedOrder(order);
+    appendStoredOrderFromCheckout(order);
     setConfirmedOrder(order);
     setCartItems([]);
     setAppliedCoupon(null);

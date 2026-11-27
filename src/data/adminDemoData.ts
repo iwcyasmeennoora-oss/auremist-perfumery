@@ -10,6 +10,7 @@ import {
   AdminStoreSettings,
   SalesRangeKey,
 } from '../types/admin';
+import { DEFAULT_DELIVERY_ZONES } from '../lib/shipping';
 import { BottleSize, PaymentMethodType } from '../types/perfume';
 import { ALL_PERFUMES } from './fragrances';
 
@@ -251,7 +252,7 @@ export const INITIAL_STORE_SETTINGS: AdminStoreSettings = {
   easypaisaEnabled: true,
   jazzcashEnabled: true,
   lowStockThreshold: LOW_STOCK_THRESHOLD,
-  deliveryZones: [],
+  deliveryZones: DEFAULT_DELIVERY_ZONES,
 };
 
 /**

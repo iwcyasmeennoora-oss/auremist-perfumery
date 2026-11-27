@@ -534,39 +534,53 @@ export function OrderConfirmationPage({
             {/* PKR Totals Summary */}
             <dl className="px-6 py-5 bg-[#F8F0E7] border-t border-[#D6AD72]/30 space-y-2.5 text-sm print:bg-white">
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-[#5C434E]">Item Subtotal</dt>
+                <dt className="text-[#5C434E]">Subtotal</dt>
                 <dd className="font-medium text-[#26151D] tabular-nums">
-                  {formatPrice(order.itemSubtotal)}
+                  {formatPrice(
+                    Number.isFinite(order.itemSubtotal) ? order.itemSubtotal : 0,
+                  )}
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-[#5C434E]">
-                  Applied Discount
-                  {order.coupon ? ` (${order.coupon.code})` : ''}
-                </dt>
-                <dd className="font-medium text-[#351522] tabular-nums">
-                  {order.discountAmount > 0
-                    ? `− ${formatPrice(order.discountAmount)}`
-                    : formatPrice(0)}
-                </dd>
-              </div>
+              {(order.discountAmount > 0 || Boolean(order.coupon)) && (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-[#5C434E]">
+                    Discount
+                    {order.coupon ? ` (${order.coupon.code})` : ''}
+                  </dt>
+                  <dd className="font-medium text-[#351522] tabular-nums">
+                    {order.discountAmount > 0
+                      ? `− ${formatPrice(order.discountAmount)}`
+                      : formatPrice(0)}
+                  </dd>
+                </div>
+              )}
 
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-[#5C434E]">Delivery Fee</dt>
-                <dd className="text-xs sm:text-sm text-[#351522] tabular-nums text-right">
-                  {order.deliveryFee !== null
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <dt className="text-[#5C434E]">Delivery / Shipping Charges</dt>
+                  {order.deliveryZoneName && (
+                    <span className="block text-[11px] text-[#5C434E]/85 mt-0.5">
+                      {order.deliveryZoneName}
+                    </span>
+                  )}
+                </div>
+                <dd className="text-xs sm:text-sm font-medium text-[#351522] tabular-nums text-right">
+                  {order.deliveryFee !== null &&
+                  Number.isFinite(order.deliveryFee)
                     ? formatPrice(order.deliveryFee)
-                    : 'Pending shipping configuration'}
+                    : 'Pending valid delivery location'}
                 </dd>
               </div>
 
               <div className="pt-3.5 border-t border-[#D6AD72]/40 flex items-baseline justify-between gap-4">
                 <dt className="text-sm font-semibold text-[#26151D]">
-                  Grand Total (PKR)
+                  Final Grand Total (PKR)
                 </dt>
                 <dd className="font-serif text-3xl font-semibold text-[#351522] tabular-nums">
-                  {formatPrice(order.grandTotal)}
+                  {formatPrice(
+                    Number.isFinite(order.grandTotal) ? order.grandTotal : 0,
+                  )}
                 </dd>
               </div>
             </dl>

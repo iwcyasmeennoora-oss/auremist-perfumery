@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Heart, Menu, Search, ShoppingBag, User, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Heart,
+  Menu,
+  Search,
+  ShoppingBag,
+  User,
+  X,
+} from 'lucide-react';
 import { LUXURY_EASE } from '../lib/motion';
 import { AppPage } from '../types/perfume';
 import { FloralEmblem } from './FloralEmblem';
@@ -215,9 +223,11 @@ export function Navbar({
                     className="py-3.5 text-sm font-medium tracking-wide text-[#26151D] hover:text-[#430F25] transition-colors min-h-[44px] flex items-center justify-between w-full text-left cursor-pointer"
                   >
                     <span>{link.label}</span>
-                    <span className="text-[#C69A50] text-xs" aria-hidden="true">
-                      →
-                    </span>
+                    <ArrowRight
+                      className="w-4 h-4 text-[#C69A50]"
+                      strokeWidth={1.6}
+                      aria-hidden="true"
+                    />
                   </button>
                 ) : (
                   <button
@@ -230,9 +240,11 @@ export function Navbar({
                     className="py-3.5 text-sm font-medium tracking-wide text-[#26151D] hover:text-[#430F25] transition-colors min-h-[44px] flex items-center justify-between w-full text-left cursor-pointer"
                   >
                     <span>{link.label}</span>
-                    <span className="text-[#C69A50] text-xs" aria-hidden="true">
-                      →
-                    </span>
+                    <ArrowRight
+                      className="w-4 h-4 text-[#C69A50]"
+                      strokeWidth={1.6}
+                      aria-hidden="true"
+                    />
                   </button>
                 ),
               )}

@@ -19,11 +19,13 @@ import {
   Image as ImageIcon,
   Info,
   Lock,
+  MapPin,
   RefreshCw,
   ShieldCheck,
   ShoppingBag,
   Smartphone,
   Trash2,
+  Truck,
   Upload,
 } from 'lucide-react';
 import { formatPrice } from '../data/fragrances';
@@ -31,14 +33,18 @@ import {
   buildOrderPreviewSnapshot,
   calculateCheckoutTotals,
   CheckoutFormErrors,
-  CONFIGURED_DELIVERY_ZONES,
   formatFileSize,
+  getConfiguredDeliveryZones,
   PAKISTAN_PROVINCES,
   validateCheckoutSubmission,
   validatePaymentProofFile,
   WALLET_RECIPIENT_NUMBER,
 } from '../lib/checkout';
 import { fadeUpVariants, LUXURY_EASE } from '../lib/motion';
+import {
+  isZoneCompatibleWithAddress,
+  resolveDeliveryForAddress,
+} from '../lib/shipping';
 import {
   AppliedCoupon,
   CartItem,
@@ -89,14 +95,15 @@ export function CheckoutPage({
   onNavigateCart,
   onOrderConfirmed,
 }: CheckoutPageProps) {
-  const configuredZones: DeliveryZoneOption[] = CONFIGURED_DELIVERY_ZONES;
+  const configuredZones: DeliveryZoneOption[] = useMemo(
+    () => getConfiguredDeliveryZones(),
+    [],
+  );
 
   const [customer, setCustomer] =
     useState<CheckoutCustomerInfo>(INITIAL_CUSTOMER);
   const [address, setAddress] = useState<CheckoutAddressInfo>(INITIAL_ADDRESS);
-  const [selectedZoneId, setSelectedZoneId] = useState<string>(
-    configuredZones.length === 1 ? configuredZones[0].id : '',
-  );
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   const [mainPaymentOption, setMainPaymentOption] =
     useState<PaymentMainOption>('cod');
   const [walletChoice, setWalletChoice] = useState<'easypaisa' | 'jazzcash'>(
@@ -126,13 +133,44 @@ export function CheckoutPage({
     };
   }, []);
 
+  const locationResolution = useMemo(
+    () => resolveDeliveryForAddress(address, configuredZones),
+    [address, configuredZones],
+  );
+
+  const syncZoneForAddress = (nextAddress: CheckoutAddressInfo) => {
+    const resolution = resolveDeliveryForAddress(nextAddress, configuredZones);
+    if (resolution.status !== 'matched') {
+      setSelectedZoneId('');
+      return;
+    }
+    setSelectedZoneId(resolution.recommendedZone?.id ?? '');
+    clearFieldError('deliveryZone');
+  };
+
+  useEffect(() => {
+    if (locationResolution.status !== 'matched') {
+      if (selectedZoneId !== '') {
+        setSelectedZoneId('');
+      }
+      return;
+    }
+    const stillCompatible =
+      selectedZoneId &&
+      locationResolution.eligibleZones.some((z) => z.id === selectedZoneId);
+    if (!stillCompatible) {
+      setSelectedZoneId(locationResolution.recommendedZone?.id ?? '');
+    }
+  }, [locationResolution, selectedZoneId]);
+
   const activePaymentMethod: PaymentMethodType =
     mainPaymentOption === 'cod' ? 'cod' : walletChoice;
 
-  const selectedZone = useMemo(
-    () => configuredZones.find((z) => z.id === selectedZoneId) ?? null,
-    [configuredZones, selectedZoneId],
-  );
+  const selectedZone = useMemo(() => {
+    const found = configuredZones.find((z) => z.id === selectedZoneId) ?? null;
+    if (!found) return null;
+    return isZoneCompatibleWithAddress(address, found).compatible ? found : null;
+  }, [configuredZones, selectedZoneId, address]);
 
   const totals = useMemo(
     () => calculateCheckoutTotals(items, appliedCoupon, selectedZone),
@@ -232,6 +270,37 @@ export function CheckoutPage({
       return;
     }
 
+    const confirmedZone =
+      configuredZones.find((z) => z.id === selectedZoneId) ?? null;
+    if (
+      !confirmedZone ||
+      !isZoneCompatibleWithAddress(address, confirmedZone).compatible
+    ) {
+      setErrors({
+        deliveryZone:
+          'Please enter a valid delivery location and select an eligible delivery zone.',
+      });
+      window.scrollTo({ top: 140, behavior: 'smooth' });
+      return;
+    }
+
+    const confirmedTotals = calculateCheckoutTotals(
+      items,
+      appliedCoupon,
+      confirmedZone,
+    );
+    if (
+      !confirmedTotals.hasCalculatedShipping ||
+      confirmedTotals.deliveryFee === null
+    ) {
+      setErrors({
+        deliveryZone:
+          'Delivery charges could not be calculated. Please select a valid delivery zone.',
+      });
+      window.scrollTo({ top: 140, behavior: 'smooth' });
+      return;
+    }
+
     setIsSubmitting(true);
     setErrors({});
 
@@ -241,8 +310,8 @@ export function CheckoutPage({
       coupon: appliedCoupon,
       customer,
       address,
-      selectedZone,
-      totals,
+      selectedZone: confirmedZone,
+      totals: confirmedTotals,
       paymentMethod: activePaymentMethod,
       paymentProof,
       transactionRefId,
@@ -465,34 +534,48 @@ export function CheckoutPage({
 
             <div className="px-6 py-5 bg-[#F8F0E7] border-t border-[#D6AD72]/30 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-[#5C434E]">Item Subtotal</span>
+                <span className="text-[#5C434E]">Subtotal</span>
                 <span className="tabular-nums font-medium">
                   {formatPrice(confirmedOrder.itemSubtotal)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#5C434E]">
-                  Applied Discount
-                  {confirmedOrder.coupon
-                    ? ` (${confirmedOrder.coupon.code})`
-                    : ''}
-                </span>
-                <span className="tabular-nums font-medium text-[#351522]">
-                  {confirmedOrder.discountAmount > 0
-                    ? `− ${formatPrice(confirmedOrder.discountAmount)}`
-                    : formatPrice(0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5C434E]">Delivery Fee</span>
-                <span className="text-xs sm:text-sm text-[#351522]">
+              {(confirmedOrder.discountAmount > 0 ||
+                Boolean(confirmedOrder.coupon)) && (
+                <div className="flex justify-between">
+                  <span className="text-[#5C434E]">
+                    Discount
+                    {confirmedOrder.coupon
+                      ? ` (${confirmedOrder.coupon.code})`
+                      : ''}
+                  </span>
+                  <span className="tabular-nums font-medium text-[#351522]">
+                    {confirmedOrder.discountAmount > 0
+                      ? `− ${formatPrice(confirmedOrder.discountAmount)}`
+                      : formatPrice(0)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[#5C434E]">
+                    Delivery / Shipping Charges
+                  </span>
+                  {confirmedOrder.deliveryZoneName && (
+                    <span className="block text-[11px] text-[#5C434E]">
+                      {confirmedOrder.deliveryZoneName}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs sm:text-sm font-medium text-[#351522] tabular-nums">
                   {confirmedOrder.deliveryFee !== null
                     ? formatPrice(confirmedOrder.deliveryFee)
-                    : 'Pending shipping configuration'}
+                    : 'Pending valid delivery location'}
                 </span>
               </div>
               <div className="flex justify-between items-baseline pt-3 border-t border-[#D6AD72]/35">
-                <span className="font-semibold text-[#26151D]">Grand Total</span>
+                <span className="font-semibold text-[#26151D]">
+                  Final Grand Total
+                </span>
                 <span className="font-serif text-3xl font-semibold text-[#351522] tabular-nums">
                   {formatPrice(confirmedOrder.grandTotal)}
                 </span>
@@ -523,7 +606,6 @@ export function CheckoutPage({
   }
 
   const hasErrorSummary = Object.keys(errors).length > 0;
-  const hasValidDeliveryOption = configuredZones.length > 0;
 
   return (
     <div className="bg-[#FFF5E9] text-[#26151D] overflow-x-hidden">
@@ -790,8 +872,10 @@ export function CheckoutPage({
                       autoComplete="country-name"
                       value={address.country}
                       onChange={(e) => {
-                        setAddress((a) => ({ ...a, country: e.target.value }));
+                        const nextAddress = { ...address, country: e.target.value };
+                        setAddress(nextAddress);
                         clearFieldError('country');
+                        syncZoneForAddress(nextAddress);
                       }}
                       placeholder="Pakistan"
                       className={`w-full px-3.5 py-2.5 rounded-lg bg-[#F8F0E7]/55 border text-sm text-[#26151D] focus:outline-none focus:bg-[#FFF5E9] ${
@@ -818,8 +902,10 @@ export function CheckoutPage({
                       id="checkout-province"
                       value={address.province}
                       onChange={(e) => {
-                        setAddress((a) => ({ ...a, province: e.target.value }));
+                        const nextAddress = { ...address, province: e.target.value };
+                        setAddress(nextAddress);
                         clearFieldError('province');
+                        syncZoneForAddress(nextAddress);
                       }}
                       className={`w-full px-3.5 py-2.5 rounded-lg bg-[#F8F0E7]/55 border text-sm text-[#26151D] focus:outline-none focus:bg-[#FFF5E9] ${
                         errors.province
@@ -854,8 +940,10 @@ export function CheckoutPage({
                       autoComplete="address-level2"
                       value={address.city}
                       onChange={(e) => {
-                        setAddress((a) => ({ ...a, city: e.target.value }));
+                        const nextAddress = { ...address, city: e.target.value };
+                        setAddress(nextAddress);
                         clearFieldError('city');
+                        syncZoneForAddress(nextAddress);
                       }}
                       placeholder="e.g. Lahore, Karachi, Islamabad"
                       className={`w-full px-3.5 py-2.5 rounded-lg bg-[#F8F0E7]/55 border text-sm text-[#26151D] placeholder:text-[#5C434E]/65 focus:outline-none focus:bg-[#FFF5E9] ${
@@ -1002,14 +1090,14 @@ export function CheckoutPage({
                   </h2>
                 </div>
 
-                {configuredZones.length > 0 ? (
-                  <div className="space-y-3">
+                {locationResolution.status === 'matched' ? (
+                  <div className="space-y-3.5">
                     <label
                       htmlFor="checkout-delivery-zone"
                       className="block text-xs font-medium text-[#351522]"
                     >
-                      Select Configured Delivery Zone{' '}
-                      <span className="text-[#7A1D38]">*</span>
+                      Matched Delivery Zone for {address.city.trim()},{' '}
+                      {address.province} <span className="text-[#7A1D38]">*</span>
                     </label>
                     <select
                       id="checkout-delivery-zone"
@@ -1018,31 +1106,108 @@ export function CheckoutPage({
                         setSelectedZoneId(e.target.value);
                         clearFieldError('deliveryZone');
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-lg bg-[#F8F0E7]/55 border border-[#D6AD72]/55 text-sm text-[#26151D] focus:outline-none focus:border-[#351522]"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-[#F8F0E7]/55 border text-sm text-[#26151D] focus:outline-none focus:border-[#351522] ${
+                        errors.deliveryZone
+                          ? 'border-[#7A1D38]'
+                          : 'border-[#D6AD72]/55'
+                      }`}
                     >
-                      <option value="">Choose a delivery zone</option>
-                      {configuredZones.map((zone) => (
+                      <option value="">Choose an eligible delivery zone</option>
+                      {locationResolution.eligibleZones.map((zone) => (
                         <option key={zone.id} value={zone.id}>
                           {zone.name} ({zone.region}) — {formatPrice(zone.fee)}
                         </option>
                       ))}
                     </select>
+
+                    {selectedZone && (
+                      <div className="p-3.5 rounded-lg bg-[#F8F0E7] border border-[#D6AD72]/45 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2 text-[#351522]">
+                          <Truck
+                            className="w-4 h-4 text-[#8C6526] shrink-0"
+                            strokeWidth={1.6}
+                          />
+                          <div>
+                            <p className="font-semibold">{selectedZone.name}</p>
+                            <p className="text-[#5C434E]">
+                              {selectedZone.region}
+                              {selectedZone.estimatedWindow
+                                ? ` · Est. ${selectedZone.estimatedWindow}`
+                                : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-semibold text-sm text-[#351522] tabular-nums">
+                          {formatPrice(selectedZone.fee)}
+                        </span>
+                      </div>
+                    )}
+
                     {errors.deliveryZone && (
-                      <p className="text-xs text-[#7A1D38]">
+                      <p role="alert" className="text-xs text-[#7A1D38]">
+                        {errors.deliveryZone}
+                      </p>
+                    )}
+                  </div>
+                ) : locationResolution.status === 'missing_location' ? (
+                  <div className="space-y-3.5">
+                    <div className="p-4 rounded-xl bg-[#F8F0E7] border border-[#D6AD72]/50 flex items-start gap-3">
+                      <MapPin
+                        className="w-4 h-4 text-[#8C6526] shrink-0 mt-0.5"
+                        strokeWidth={1.7}
+                      />
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold text-[#351522]">
+                          Select your province and enter your delivery city
+                        </p>
+                        <p className="text-[#5C434E] leading-relaxed">
+                          Shipping charges are calculated by your delivery
+                          location and courier zone (never assumed free).
+                        </p>
+                      </div>
+                    </div>
+
+                    {configuredZones.length > 0 && (
+                      <div className="rounded-lg border border-[#D6AD72]/35 bg-[#FFF5E9] p-3.5 space-y-2">
+                        <span className="block text-[11px] uppercase tracking-[0.14em] text-[#8C6526] font-semibold">
+                          Regional Courier Rates
+                        </span>
+                        <ul className="divide-y divide-[#D6AD72]/20 text-xs">
+                          {configuredZones.map((zone) => (
+                            <li
+                              key={zone.id}
+                              className="py-1.5 flex items-center justify-between gap-2"
+                            >
+                              <span className="text-[#26151D]">
+                                <strong className="font-medium text-[#351522]">
+                                  {zone.name}
+                                </strong>{' '}
+                                <span className="text-[#5C434E]">
+                                  ({zone.region})
+                                </span>
+                              </span>
+                              <span className="font-medium text-[#351522] tabular-nums shrink-0">
+                                {formatPrice(zone.fee)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {errors.deliveryZone && (
+                      <p role="alert" className="text-xs text-[#7A1D38]">
                         {errors.deliveryZone}
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-[#F8F0E7] border border-[#D6AD72]/45 space-y-2">
-                    <p className="text-xs sm:text-sm font-semibold text-[#351522]">
-                      Configuration Pending: Delivery zones are not configured yet
+                  <div className="p-4 rounded-xl bg-[#FDF3F5] border border-[#7A1D38]/35 space-y-2">
+                    <p className="text-xs sm:text-sm font-semibold text-[#7A1D38]">
+                      Unsupported or Unavailable Delivery Location
                     </p>
-                    <p className="text-xs text-[#5C434E] leading-relaxed">
-                      Store delivery zones and regional shipping charges are not
-                      configured yet. Delivery charges are not estimated or
-                      invented, and order placement is unavailable until a valid
-                      delivery option is configured.
+                    <p className="text-xs text-[#26151D] leading-relaxed">
+                      {locationResolution.message}
                     </p>
                     {errors.deliveryZone && (
                       <p role="alert" className="text-xs text-[#7A1D38] pt-1">
@@ -1111,7 +1276,9 @@ export function CheckoutPage({
                         </div>
                       </div>
                       <span className="text-xs font-semibold text-[#351522] tabular-nums shrink-0 pt-1">
-                        {formatPrice(totals.grandTotal)}
+                        {totals.hasCalculatedShipping
+                          ? formatPrice(totals.grandTotal)
+                          : 'Pending shipping'}
                       </span>
                     </button>
 
@@ -1120,7 +1287,9 @@ export function CheckoutPage({
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span>Exact Amount Payable at Delivery:</span>
                           <strong className="font-semibold text-sm tabular-nums">
-                            {formatPrice(totals.grandTotal)}
+                            {totals.hasCalculatedShipping
+                              ? formatPrice(totals.grandTotal)
+                              : 'Pending valid delivery location'}
                           </strong>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-2 text-[#5C434E]">
@@ -1276,23 +1445,42 @@ export function CheckoutPage({
                               Exact Payment Amount Required:
                             </span>
                             <strong className="font-semibold text-sm text-[#351522] tabular-nums">
-                              {formatPrice(totals.grandTotal)}
+                              {totals.hasCalculatedShipping
+                                ? formatPrice(totals.grandTotal)
+                                : 'Pending valid delivery location'}
                             </strong>
                           </div>
 
                           <p className="text-xs text-[#5C434E] leading-relaxed">
-                            Please transfer exactly{' '}
-                            <strong className="text-[#351522] tabular-nums">
-                              {formatPrice(totals.grandTotal)}
-                            </strong>{' '}
-                            to{' '}
-                            <strong className="text-[#351522] tabular-nums">
-                              {WALLET_RECIPIENT_NUMBER}
-                            </strong>{' '}
-                            using {walletChoice === 'easypaisa' ? 'Easypaisa' : 'JazzCash'}{' '}
-                            <strong>before placing your order</strong>. Orders paid
-                            by wallet transfer remain in &ldquo;Payment Awaiting
-                            Verification&rdquo; until reviewed.
+                            {totals.hasCalculatedShipping ? (
+                              <>
+                                Please transfer exactly{' '}
+                                <strong className="text-[#351522] tabular-nums">
+                                  {formatPrice(totals.grandTotal)}
+                                </strong>{' '}
+                                to{' '}
+                                <strong className="text-[#351522] tabular-nums">
+                                  {WALLET_RECIPIENT_NUMBER}
+                                </strong>{' '}
+                                using{' '}
+                                {walletChoice === 'easypaisa'
+                                  ? 'Easypaisa'
+                                  : 'JazzCash'}{' '}
+                                <strong>before placing your order</strong>. Orders
+                                paid by wallet transfer remain in &ldquo;Payment
+                                Awaiting Verification&rdquo; until reviewed.
+                              </>
+                            ) : (
+                              <>
+                                Complete your delivery province and city above to
+                                calculate your exact shipping charge and final
+                                transfer amount before sending funds to{' '}
+                                <strong className="text-[#351522] tabular-nums">
+                                  {WALLET_RECIPIENT_NUMBER}
+                                </strong>
+                                .
+                              </>
+                            )}
                           </p>
                         </div>
 
@@ -1510,44 +1698,71 @@ export function CheckoutPage({
               {/* Totals Formula Breakdown */}
               <dl className="space-y-3 pt-4 border-t border-[#D6AD72]/30 text-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-[#5C434E]">Item Subtotal</dt>
+                  <dt className="text-[#5C434E]">Subtotal</dt>
                   <dd className="font-medium text-[#26151D] tabular-nums">
                     {formatPrice(totals.eligibleItemSubtotal)}
                   </dd>
                 </div>
 
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-[#5C434E]">
-                    Applied Discount
-                    {appliedCoupon ? ` (${appliedCoupon.code})` : ''}
-                  </dt>
-                  <dd className="font-medium text-[#351522] tabular-nums">
-                    {totals.validDiscount > 0
-                      ? `− ${formatPrice(totals.validDiscount)}`
-                      : formatPrice(0)}
-                  </dd>
-                </div>
+                {(totals.validDiscount > 0 || Boolean(appliedCoupon)) && (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-[#5C434E]">
+                      Discount
+                      {appliedCoupon ? ` (${appliedCoupon.code})` : ''}
+                    </dt>
+                    <dd className="font-medium text-[#351522] tabular-nums">
+                      {totals.validDiscount > 0
+                        ? `− ${formatPrice(totals.validDiscount)}`
+                        : formatPrice(0)}
+                    </dd>
+                  </div>
+                )}
 
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-[#5C434E]">Delivery Fee</dt>
-                  <dd className="text-right text-xs text-[#351522] tabular-nums max-w-[190px]">
-                    {totals.deliveryFee !== null
+                  <div>
+                    <dt className="text-[#5C434E]">
+                      Delivery / Shipping Charges
+                    </dt>
+                    {selectedZone && (
+                      <span className="block text-[11px] text-[#5C434E]/85 mt-0.5">
+                        {selectedZone.name}
+                      </span>
+                    )}
+                  </div>
+                  <dd
+                    className={`text-right tabular-nums max-w-[200px] ${
+                      totals.hasCalculatedShipping && totals.deliveryFee !== null
+                        ? 'font-medium text-[#26151D]'
+                        : 'text-xs text-[#8C6526] font-medium'
+                    }`}
+                  >
+                    {totals.hasCalculatedShipping && totals.deliveryFee !== null
                       ? formatPrice(totals.deliveryFee)
-                      : 'Configuration pending'}
+                      : 'Pending valid delivery location'}
                   </dd>
                 </div>
 
                 <div className="pt-4 border-t border-[#D6AD72]/40 flex items-baseline justify-between gap-4">
                   <div>
                     <dt className="text-sm font-semibold text-[#26151D]">
-                      Grand Total
+                      Final Grand Total
                     </dt>
                     <span className="block text-[11px] text-[#5C434E]">
-                      Server recalculation required
+                      {totals.hasCalculatedShipping
+                        ? 'Includes courier shipping charge'
+                        : 'Enter delivery city & province'}
                     </span>
                   </div>
-                  <dd className="font-serif text-3xl font-semibold text-[#351522] tabular-nums">
-                    {formatPrice(totals.grandTotal)}
+                  <dd
+                    className={
+                      totals.hasCalculatedShipping
+                        ? 'font-serif text-3xl font-semibold text-[#351522] tabular-nums'
+                        : 'text-sm font-semibold text-[#8C6526] text-right'
+                    }
+                  >
+                    {totals.hasCalculatedShipping
+                      ? formatPrice(totals.grandTotal)
+                      : 'Pending shipping'}
                   </dd>
                 </div>
               </dl>
@@ -1556,12 +1771,8 @@ export function CheckoutPage({
               <div className="space-y-3 pt-1">
                 <motion.button
                   type="submit"
-                  disabled={isSubmitting || !hasValidDeliveryOption}
-                  whileTap={
-                    !isSubmitting && hasValidDeliveryOption
-                      ? { scale: 0.985 }
-                      : undefined
-                  }
+                  disabled={isSubmitting}
+                  whileTap={!isSubmitting ? { scale: 0.985 } : undefined}
                   transition={{ duration: 0.2, ease: LUXURY_EASE }}
                   className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-lg bg-[#351522] text-[#FFF5E9] border border-[#D6AD72] text-sm font-medium tracking-wide hover:bg-[#240D16] disabled:opacity-55 transition-colors cursor-pointer disabled:cursor-not-allowed min-h-[50px]"
                 >
@@ -1572,20 +1783,22 @@ export function CheckoutPage({
                   <span>
                     {isSubmitting
                       ? 'Preparing Confirmation...'
-                      : `Confirm Order · ${formatPrice(totals.grandTotal)}`}
+                      : totals.hasCalculatedShipping
+                        ? `Confirm Order · ${formatPrice(totals.grandTotal)}`
+                        : 'Confirm Order'}
                   </span>
                 </motion.button>
 
-                {!hasValidDeliveryOption && (
-                  <p className="text-xs text-[#7A1D38] text-center leading-relaxed">
-                    Order placement is paused until configured delivery zones and
-                    shipping rates are available.
+                {!totals.hasCalculatedShipping && (
+                  <p className="text-xs text-[#8C6526] text-center leading-relaxed">
+                    Select a supported province and enter your delivery city to
+                    calculate courier shipping charges before placing your order.
                   </p>
                 )}
 
                 <p className="text-[11px] text-[#5C434E] text-center leading-relaxed">
-                  Grand Total = Item Subtotal − Valid Discount + Delivery Fee.
-                  Product prices, stock, coupons, and delivery charges are
+                  Final Grand Total = Subtotal − Discount + Delivery Charges.
+                  Product prices, stock, coupons, and shipping rules are
                   recalculated on the server when backend APIs are connected.
                 </p>
               </div>

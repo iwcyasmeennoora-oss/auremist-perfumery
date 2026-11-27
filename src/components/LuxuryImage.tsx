@@ -25,16 +25,14 @@ export function LuxuryImage({
         aria-label={alt}
       >
         <svg
-          width="32"
-          height="32"
           viewBox="0 0 32 32"
           fill="none"
           aria-hidden="true"
-          className="mb-3 text-[#B89352]"
+          className="w-8 h-8 mb-3 text-[#B89352]"
         >
-          <rect x="11" y="4" width="10" height="5" rx="1" stroke="currentColor" strokeWidth="1.25" />
-          <path d="M13 9V12H19V9" stroke="currentColor" strokeWidth="1.25" />
-          <rect x="7" y="12" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.25" />
+          <rect x="11" y="4" width="10" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M13 9V12H19V9" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="7" y="12" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
         </svg>
         <span className="font-serif text-lg tracking-wide">{fallbackTitle}</span>
         <span className="text-xs text-[#614E54] mt-1">Eau de Parfum</span>

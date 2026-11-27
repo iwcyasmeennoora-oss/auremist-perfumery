@@ -215,7 +215,7 @@ export function AdminInventoryView({
                             aria-label={`Decrease stock for ${row.sku}`}
                             className="w-7 h-7 rounded border border-[#D6AD72]/60 bg-[#F8F0E7] flex items-center justify-center text-[#351522] disabled:opacity-40 cursor-pointer"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-3 h-3" strokeWidth={1.7} />
                           </button>
                           <input
                             type="number"
@@ -243,7 +243,7 @@ export function AdminInventoryView({
                             aria-label={`Increase stock for ${row.sku}`}
                             className="w-7 h-7 rounded border border-[#D6AD72]/60 bg-[#F8F0E7] flex items-center justify-center text-[#351522] cursor-pointer"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3 h-3" strokeWidth={1.7} />
                           </button>
                         </div>
                       </td>

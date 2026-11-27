@@ -667,7 +667,7 @@ export const FEATURED_PERFUMES: PerfumeProduct[] = ALL_PERFUMES.slice(0, 4);
 
 export const SERVICE_HIGHLIGHTS = [
   { id: 'quality', title: 'Premium Quality', detail: '22% parfum oils' },
-  { id: 'shipping', title: 'Free Shipping', detail: 'Across Pakistan' },
+  { id: 'shipping', title: 'Nationwide Shipping', detail: 'Zone-based rates' },
   { id: 'security', title: 'Secure Shopping', detail: 'Verified authentic' },
   { id: 'support', title: '24/7 Support', detail: 'Scent concierge' },
   { id: 'returns', title: 'Easy Returns', detail: '30-day guarantee' },

@@ -238,12 +238,12 @@ export function AdminCouponsView({
                           >
                             {coupon.isActive ? (
                               <>
-                                <ToggleRight className="w-3.5 h-3.5" />
+                                <ToggleRight className="w-3.5 h-3.5" strokeWidth={1.7} />
                                 <span>Active</span>
                               </>
                             ) : (
                               <>
-                                <ToggleLeft className="w-3.5 h-3.5" />
+                                <ToggleLeft className="w-3.5 h-3.5" strokeWidth={1.7} />
                                 <span>Inactive</span>
                               </>
                             )}
@@ -255,7 +255,7 @@ export function AdminCouponsView({
                             aria-label={`Edit coupon ${coupon.code}`}
                             className="p-1.5 rounded border border-[#D6AD72]/50 text-[#351522] hover:border-[#351522] cursor-pointer"
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-3.5 h-3.5" strokeWidth={1.6} />
                           </button>
 
                           <button
@@ -267,7 +267,7 @@ export function AdminCouponsView({
                             aria-label={`Delete coupon ${coupon.code}`}
                             className="p-1.5 rounded border border-[#D6AD72]/50 text-[#5C434E] hover:text-[#7A1D38] hover:border-[#7A1D38]/40 cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.6} />
                           </button>
                         </div>
                       </td>

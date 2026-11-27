@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, Heart, X } from 'lucide-react';
+import { ArrowRight, Check, Heart, X } from 'lucide-react';
 import { formatPrice } from '../data/fragrances';
 import { LUXURY_EASE } from '../lib/motion';
 import { BottleSize, CartItem, PerfumeProduct } from '../types/perfume';
@@ -243,9 +243,14 @@ export function ProductQuickViewModal({
                         onClose();
                         onViewFullDetails(product);
                       }}
-                      className="text-xs font-medium text-[#430F25] hover:text-[#C69A50] underline underline-offset-4 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-[#430F25] hover:text-[#C69A50] underline underline-offset-4 transition-colors cursor-pointer"
                     >
-                      View Full Product Page →
+                      <span>View Full Product Page</span>
+                      <ArrowRight
+                        className="w-3.5 h-3.5"
+                        strokeWidth={1.7}
+                        aria-hidden="true"
+                      />
                     </button>
                   )}
 

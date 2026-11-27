@@ -95,10 +95,10 @@ export function CartDrawer({
               </button>
             </div>
 
-            {/* Pending Shipping Notice */}
+            {/* Delivery Charges Notice */}
             <div className="px-6 py-3.5 bg-[#F8EBDD] border-b border-[#C69A50]/25">
               <p className="text-xs text-[#430F25] font-medium">
-                Delivery fee is pending location calculation once shipping rules are connected.
+                Delivery charges are calculated at checkout by delivery zone.
               </p>
             </div>
 
@@ -267,7 +267,7 @@ export function CartDrawer({
                   )}
                   <div className="flex items-center justify-between pt-1.5">
                     <span className="text-sm text-[#5C434E]">
-                      Estimated Total
+                      Subtotal (excl. shipping)
                     </span>
                     <span className="font-serif text-2xl font-semibold text-[#430F25] tabular-nums">
                       {formatPrice(grandTotal)}

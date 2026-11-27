@@ -16,7 +16,7 @@ export function AnnouncementBar({ onOpenTrackOrder }: AnnouncementBarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 h-9 flex items-center justify-between gap-4 text-[11px] sm:text-xs tracking-wide">
         <div className="flex items-center gap-3 sm:gap-4 truncate">
           <span className="whitespace-nowrap font-medium text-[#FFF5E9]">
-            Free Delivery Across Pakistan
+            Nationwide Courier Delivery
           </span>
           <span className="hidden sm:inline text-[#C69A50]" aria-hidden="true">
             ·

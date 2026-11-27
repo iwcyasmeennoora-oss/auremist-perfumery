@@ -74,8 +74,6 @@ export function Footer({
                 className="w-9 h-9 rounded-full border border-[#C69A50]/45 flex items-center justify-center text-[#FFF5E9] hover:text-[#C69A50] hover:border-[#C69A50] transition-colors"
               >
                 <svg
-                  width="15"
-                  height="15"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -83,6 +81,7 @@ export function Footer({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   aria-hidden="true"
+                  className="w-4 h-4"
                 >
                   <path d="M8 20l4-9" />
                   <path d="M10.7 14c.437 1.263 1.43 2 2.55 2c2.071 0 3.75-1.554 3.75-4a5 5 0 1 0-9.7 1.7" />
@@ -98,8 +97,6 @@ export function Footer({
                 className="w-9 h-9 rounded-full border border-[#C69A50]/45 flex items-center justify-center text-[#FFF5E9] hover:text-[#C69A50] hover:border-[#C69A50] transition-colors"
               >
                 <svg
-                  width="15"
-                  height="15"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -107,6 +104,7 @@ export function Footer({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   aria-hidden="true"
+                  className="w-4 h-4"
                 >
                   <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
                 </svg>

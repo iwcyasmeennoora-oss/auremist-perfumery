@@ -349,9 +349,14 @@ export function AdminOverviewView({
             <button
               type="button"
               onClick={() => onNavigateSection('payment-verification')}
-              className="text-xs font-medium text-[#351522] hover:text-[#8C6526] cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[#351522] hover:text-[#8C6526] transition-colors cursor-pointer"
             >
-              Review Queue →
+              <span>Review Queue</span>
+              <ArrowRight
+                className="w-3.5 h-3.5"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
             </button>
           </div>
 
@@ -405,9 +410,14 @@ export function AdminOverviewView({
             <button
               type="button"
               onClick={() => onNavigateSection('inventory')}
-              className="text-xs font-medium text-[#351522] hover:text-[#8C6526] cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[#351522] hover:text-[#8C6526] transition-colors cursor-pointer"
             >
-              Adjust Stock →
+              <span>Adjust Stock</span>
+              <ArrowRight
+                className="w-3.5 h-3.5"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
             </button>
           </div>
 

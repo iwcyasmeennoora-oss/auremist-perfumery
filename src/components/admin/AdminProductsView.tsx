@@ -384,12 +384,12 @@ export function AdminProductsView({
                         >
                           {product.status === 'active' ? (
                             <>
-                              <ToggleRight className="w-3.5 h-3.5" />
+                              <ToggleRight className="w-3.5 h-3.5" strokeWidth={1.7} />
                               <span>Active</span>
                             </>
                           ) : (
                             <>
-                              <ToggleLeft className="w-3.5 h-3.5" />
+                              <ToggleLeft className="w-3.5 h-3.5" strokeWidth={1.7} />
                               <span>Draft</span>
                             </>
                           )}
@@ -485,13 +485,13 @@ export function AdminProductsView({
                 aria-label="Close product dialog"
                 className="p-1.5 text-[#5C434E] hover:text-[#351522] cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" strokeWidth={1.6} />
               </button>
             </div>
 
             {formError && (
               <div className="p-3 rounded-lg bg-[#FDF3F5] border border-[#7A1D38]/35 text-xs text-[#7A1D38] flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={1.7} />
                 <span>{formError}</span>
               </div>
             )}

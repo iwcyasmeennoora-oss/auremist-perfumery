@@ -111,6 +111,9 @@ export interface DeliveryZoneOption {
   region: string;
   fee: number;
   estimatedWindow?: string;
+  supportedProvinces?: string[];
+  priorityCities?: string[];
+  isNationwideFallback?: boolean;
 }
 
 export type PaymentMainOption = 'cod' | 'wallet';
@@ -150,11 +153,40 @@ export type OrderTrackingStageKey =
   | 'out_for_delivery'
   | 'delivered';
 
+export interface PreparedCheckoutOrderPayload {
+  customer: CheckoutCustomerInfo;
+  address: CheckoutAddressInfo;
+  deliveryZoneId: string;
+  deliveryZoneName: string;
+  items: Array<{
+    productId: string;
+    slug: string;
+    size: string;
+    sku: string;
+    quantity: number;
+  }>;
+  giftWrap: boolean;
+  couponCode: string | null;
+  itemSubtotalPkr: number;
+  discountAmountPkr: number;
+  deliveryFeePkr: number;
+  paymentMethod: PaymentMethodType;
+  transactionRefId?: string;
+  /**
+   * Uploaded through a private authenticated FormData multipart endpoint.
+   * Never expose uploaded proof files via public image URLs.
+   */
+  hasPrivatePaymentProof: boolean;
+  /** Client total including shipping; backend must recompute authoritatively. */
+  advisoryClientTotalPkr: number;
+}
+
 export interface CheckoutOrderPreview {
   orderNumber: string;
   createdAt: string;
   customer: CheckoutCustomerInfo;
   address: CheckoutAddressInfo;
+  deliveryZoneId?: string | null;
   deliveryZoneName: string | null;
   items: CartItem[];
   giftWrap: boolean;
@@ -173,6 +205,7 @@ export interface CheckoutOrderPreview {
   hasSubmittedProof?: boolean;
   backendOrderId?: string;
   backendTrackingStages?: OrderTrackingStageKey[];
+  backendOrderPayload?: PreparedCheckoutOrderPayload;
   isDemoPreview: boolean;
 }
 

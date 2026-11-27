@@ -483,37 +483,41 @@ export function CartPage({
               {/* Itemized PKR Summary Rows */}
               <dl className="space-y-3.5 text-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-[#5C434E]">Item Subtotal</dt>
+                  <dt className="text-[#5C434E]">Subtotal</dt>
                   <dd className="font-medium text-[#26151D] tabular-nums">
                     {formatPrice(itemSubtotal)}
                   </dd>
                 </div>
 
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-[#5C434E]">
-                    Discount{appliedCoupon ? ` (${appliedCoupon.code})` : ''}
-                  </dt>
-                  <dd className="font-medium text-[#351522] tabular-nums">
-                    {discountAmount > 0
-                      ? `− ${formatPrice(discountAmount)}`
-                      : formatPrice(0)}
-                  </dd>
-                </div>
+                {(discountAmount > 0 || appliedCoupon) && (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-[#5C434E]">
+                      Discount{appliedCoupon ? ` (${appliedCoupon.code})` : ''}
+                    </dt>
+                    <dd className="font-medium text-[#351522] tabular-nums">
+                      {discountAmount > 0
+                        ? `− ${formatPrice(discountAmount)}`
+                        : formatPrice(0)}
+                    </dd>
+                  </div>
+                )}
 
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-[#5C434E]">Delivery Fee</dt>
-                  <dd className="text-right text-xs text-[#351522] max-w-[200px] leading-snug">
-                    Pending delivery zone selection &amp; shipping rules
+                  <dt className="text-[#5C434E]">
+                    Delivery / Shipping Charges
+                  </dt>
+                  <dd className="text-right text-xs text-[#351522] max-w-[210px] leading-snug">
+                    Calculated at checkout by delivery zone
                   </dd>
                 </div>
 
                 <div className="pt-4 border-t border-[#D6AD72]/35 flex items-baseline justify-between gap-4">
                   <div>
                     <dt className="text-sm font-semibold text-[#26151D]">
-                      Grand Total
+                      Estimated Total
                     </dt>
                     <span className="block text-[11px] text-[#5C434E]">
-                      Excludes pending delivery calculation
+                      Shipping added at checkout
                     </span>
                   </div>
                   <dd className="font-serif text-3xl font-semibold text-[#351522] tabular-nums">

@@ -122,10 +122,17 @@ export function calculateCartTotals(
   items: CartItem[],
   appliedCoupon: AppliedCoupon | null,
 ): CartTotals {
-  const itemSubtotal = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
+  const itemSubtotal = items.reduce((sum, item) => {
+    const unit =
+      Number.isFinite(item.unitPrice) && item.unitPrice >= 0
+        ? item.unitPrice
+        : 0;
+    const qty =
+      Number.isFinite(item.quantity) && item.quantity > 0
+        ? Math.floor(item.quantity)
+        : 0;
+    return sum + unit * qty;
+  }, 0);
 
   if (itemSubtotal <= 0 || !appliedCoupon) {
     return {
@@ -135,10 +142,15 @@ export function calculateCartTotals(
     };
   }
 
+  const couponVal =
+    Number.isFinite(appliedCoupon.value) && appliedCoupon.value > 0
+      ? appliedCoupon.value
+      : 0;
+
   const rawDiscount =
     appliedCoupon.type === 'percentage'
-      ? Math.round((itemSubtotal * appliedCoupon.value) / 100)
-      : appliedCoupon.value;
+      ? Math.round((itemSubtotal * couponVal) / 100)
+      : Math.round(couponVal);
 
   const discountAmount = Math.min(itemSubtotal, Math.max(0, rawDiscount));
   const grandTotal = Math.max(0, itemSubtotal - discountAmount);
