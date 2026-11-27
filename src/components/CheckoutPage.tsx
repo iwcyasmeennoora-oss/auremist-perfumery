@@ -45,6 +45,8 @@ import {
   isZoneCompatibleWithAddress,
   resolveDeliveryForAddress,
 } from '../lib/shipping';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { submitCheckoutOrderToSupabase } from '../lib/supabaseOrders';
 import {
   AppliedCoupon,
   CartItem,
@@ -115,8 +117,10 @@ export function CheckoutPage({
   const [proofError, setProofError] = useState<string | null>(null);
   const [transactionRefId, setTransactionRefId] = useState('');
   const [errors, setErrors] = useState<CheckoutFormErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
+  const supabaseConnected = useMemo(() => isSupabaseConfigured(), []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const proofUrlRef = useRef<string | null>(null);
@@ -247,9 +251,10 @@ export function CheckoutPage({
     }
   };
 
-  const handleConfirmOrder = (e: FormEvent) => {
+  const handleConfirmOrder = async (e: FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+    setSubmitError(null);
 
     const validationErrors = validateCheckoutSubmission({
       items,
@@ -317,14 +322,31 @@ export function CheckoutPage({
       transactionRefId,
     });
 
+    const result = await submitCheckoutOrderToSupabase(
+      orderSnapshot,
+      paymentProof,
+    );
+
+    if (!result.ok) {
+      setSubmitError(result.message);
+      setIsSubmitting(false);
+      window.scrollTo({ top: 140, behavior: 'smooth' });
+      return;
+    }
+
+    const savedOrder: CheckoutOrderPreview = {
+      ...orderSnapshot,
+      backendOrderId: result.orderId,
+      backendTrackingStages: ['order_received'],
+      isDemoPreview: false,
+    };
+
     if (paymentProof?.previewObjectUrl) {
       URL.revokeObjectURL(paymentProof.previewObjectUrl);
     }
 
-    window.setTimeout(() => {
-      onOrderConfirmed(orderSnapshot);
-      setIsSubmitting(false);
-    }, 180);
+    onOrderConfirmed(savedOrder);
+    setIsSubmitting(false);
   };
 
   // Order Confirmation Screen (Frontend Demonstration Preview)
@@ -360,20 +382,22 @@ export function CheckoutPage({
                 </div>
               </div>
 
-              <div className="mt-5 p-4 rounded-xl bg-[#FFF5E9] border border-[#D6AD72]/55 flex items-start gap-3">
-                <Info
-                  className="w-4 h-4 text-[#8C6526] shrink-0 mt-0.5"
-                  strokeWidth={1.8}
-                />
-                <p className="text-xs sm:text-sm text-[#26151D] leading-relaxed">
-                  <strong className="font-semibold text-[#351522]">
-                    Frontend Checkout Demonstration:
-                  </strong>{' '}
-                  Backend order APIs and database persistence are not connected
-                  yet. This confirmation preview is not permanently saved, and
-                  submitted transfers are not marked as verified or paid.
-                </p>
-              </div>
+              {confirmedOrder.isDemoPreview && (
+                <div className="mt-5 p-4 rounded-xl bg-[#FFF5E9] border border-[#D6AD72]/55 flex items-start gap-3">
+                  <Info
+                    className="w-4 h-4 text-[#8C6526] shrink-0 mt-0.5"
+                    strokeWidth={1.8}
+                  />
+                  <p className="text-xs sm:text-sm text-[#26151D] leading-relaxed">
+                    <strong className="font-semibold text-[#351522]">
+                      Frontend Checkout Demonstration:
+                    </strong>{' '}
+                    Backend order APIs and database persistence are not connected
+                    yet. This confirmation preview is not permanently saved, and
+                    submitted transfers are not marked as verified or paid.
+                  </p>
+                </div>
+              )}
             </motion.div>
           </div>
         </section>
@@ -665,19 +689,32 @@ export function CheckoutPage({
             </button>
           </motion.div>
 
-          {/* Transparent Frontend Demonstration Notice */}
+          {/* Checkout Persistence Notice */}
           <div className="mt-6 p-3.5 sm:p-4 rounded-xl bg-[#FFF5E9] border border-[#D6AD72]/50 flex items-start gap-3">
             <Info
               className="w-4 h-4 text-[#8C6526] shrink-0 mt-0.5"
               strokeWidth={1.7}
             />
             <p className="text-xs text-[#26151D] leading-relaxed">
-              <strong className="font-semibold text-[#351522]">
-                Frontend Checkout Preview:
-              </strong>{' '}
-              Backend order APIs and database storage are not connected yet. Orders
-              confirmed here demonstrate validation and payment confirmation states
-              without permanently saving records or verifying wallet transfers.
+              {supabaseConnected ? (
+                <>
+                  <strong className="font-semibold text-[#351522]">
+                    Secure Order Submission:
+                  </strong>{' '}
+                  Confirmed orders, delivery charges, and payment selection details
+                  are saved directly to the AUREMIST database. Manual Easypaisa
+                  and JazzCash transfers remain pending until verified by our team.
+                </>
+              ) : (
+                <>
+                  <strong className="font-semibold text-[#351522]">
+                    Database Setup Required:
+                  </strong>{' '}
+                  Supabase environment credentials are missing. Configure
+                  VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to save
+                  submitted orders.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -719,6 +756,24 @@ export function CheckoutPage({
           >
             {/* Left Column: Customer Details, Delivery Address, Shipping Zone & Payment Method */}
             <div className="lg:col-span-7 space-y-8 min-w-0">
+              {submitError && (
+                <div
+                  role="alert"
+                  className="p-4 rounded-xl bg-[#FFF5E9] border border-[#7A1D38]/55 flex items-start gap-3 text-xs text-[#7A1D38]"
+                >
+                  <AlertCircle
+                    className="w-4 h-4 shrink-0 mt-0.5"
+                    strokeWidth={1.8}
+                  />
+                  <div>
+                    <p className="font-semibold mb-0.5">
+                      Unable to complete order submission
+                    </p>
+                    <p className="leading-relaxed">{submitError}</p>
+                  </div>
+                </div>
+              )}
+
               {hasErrorSummary && (
                 <div
                   role="alert"
@@ -1782,7 +1837,7 @@ export function CheckoutPage({
                   />
                   <span>
                     {isSubmitting
-                      ? 'Preparing Confirmation...'
+                      ? 'Saving Order...'
                       : totals.hasCalculatedShipping
                         ? `Confirm Order · ${formatPrice(totals.grandTotal)}`
                         : 'Confirm Order'}
@@ -1798,8 +1853,9 @@ export function CheckoutPage({
 
                 <p className="text-[11px] text-[#5C434E] text-center leading-relaxed">
                   Final Grand Total = Subtotal − Discount + Delivery Charges.
-                  Product prices, stock, coupons, and shipping rules are
-                  recalculated on the server when backend APIs are connected.
+                  {supabaseConnected
+                    ? ' All checkout details are recorded in the AUREMIST database.'
+                    : ' Configure Supabase credentials to enable database order storage.'}
                 </p>
               </div>
             </aside>
