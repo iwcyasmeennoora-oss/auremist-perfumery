@@ -178,12 +178,34 @@ const idempotencyCache = new Map<
   { expiresAt: number; result: ServerOrderCreateResult }
 >();
 
+function stripWrappingQuotes(raw: string | undefined): string {
+  if (!raw || typeof raw !== 'string') return '';
+  let trimmed = raw.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 export function normalizeSupabaseUrl(rawUrl: string | undefined): string | null {
-  if (!rawUrl || typeof rawUrl !== 'string') return null;
-  const trimmed = rawUrl.trim();
+  const trimmed = stripWrappingQuotes(rawUrl);
   if (!trimmed) return null;
 
-  const stripped = trimmed.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+  const withProtocol =
+    /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : /^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(trimmed)
+        ? `http://${trimmed}`
+        : trimmed.includes('.')
+          ? `https://${trimmed}`
+          : trimmed;
+
+  const stripped = withProtocol
+    .replace(/\/rest\/v1\/?$/i, '')
+    .replace(/\/+$/, '');
   try {
     const parsed = new URL(stripped);
     const isLocalhost =
@@ -200,29 +222,74 @@ export function normalizeSupabaseUrl(rawUrl: string | undefined): string | null 
   }
 }
 
+const URL_ENV_CANDIDATES = [
+  'SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'VITE_SUPABASE_URL',
+  'PUBLIC_SUPABASE_URL',
+  'SUPABASE_PROJECT_URL',
+] as const;
+
+const KEY_ENV_CANDIDATES = [
+  'SUPABASE_PUBLISHABLE_KEY',
+  'SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'VITE_SUPABASE_PUBLISHABLE_KEY',
+  'VITE_SUPABASE_ANON_KEY',
+  'SUPABASE_PUBLIC_KEY',
+] as const;
+
 function getServerSupabaseEnv(): {
   url: string | null;
   key: string | null;
+  urlSource: string | null;
+  keySource: string | null;
   hasServiceRole: boolean;
 } {
-  const url = normalizeSupabaseUrl(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  );
-  const rawKey =
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY;
-  const key =
-    typeof rawKey === 'string' && rawKey.trim().length > 0
-      ? rawKey.trim()
-      : null;
+  let url: string | null = null;
+  let urlSource: string | null = null;
+  for (const name of URL_ENV_CANDIDATES) {
+    const normalized = normalizeSupabaseUrl(process.env[name]);
+    if (normalized) {
+      url = normalized;
+      urlSource = name;
+      break;
+    }
+  }
+
+  let key: string | null = null;
+  let keySource: string | null = null;
+  for (const name of KEY_ENV_CANDIDATES) {
+    const cleaned = stripWrappingQuotes(process.env[name]);
+    if (cleaned.length > 0) {
+      key = cleaned;
+      keySource = name;
+      break;
+    }
+  }
 
   const hasServiceRole =
-    typeof process.env.SUPABASE_SERVICE_ROLE_KEY === 'string' &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY.trim().length > 0;
+    stripWrappingQuotes(process.env.SUPABASE_SERVICE_ROLE_KEY).length > 0;
 
-  return { url, key, hasServiceRole };
+  return { url, key, urlSource, keySource, hasServiceRole };
+}
+
+export function getServerSupabaseDiagnostics(): {
+  configured: boolean;
+  hasUrl: boolean;
+  hasKey: boolean;
+  urlVar: string | null;
+  keyVar: string | null;
+} {
+  const { url, key, urlSource, keySource } = getServerSupabaseEnv();
+  return {
+    configured: Boolean(url && key),
+    hasUrl: Boolean(url),
+    hasKey: Boolean(key),
+    urlVar: urlSource,
+    keyVar: keySource,
+  };
 }
 
 export function isServerSupabaseConfigured(): boolean {

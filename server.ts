@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express, { type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createOrderViaServerSupabase,
   fetchCatalogAndZonesFromSupabase,
+  getServerSupabaseDiagnostics,
   isServerSupabaseConfigured,
   testServerSupabaseConnection,
   type CreateOrderRequestBody,
@@ -14,6 +15,13 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+for (const envFile of ['.env.local', '.env']) {
+  const envPath = path.resolve(__dirname, envFile);
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
+
 async function startServer() {
   const app = express();
   const isProd = process.env.NODE_ENV === 'production';
@@ -21,10 +29,27 @@ async function startServer() {
 
   app.use(express.json({ limit: '8mb' }));
 
+  app.use('/api', (_req: Request, res: Response, next) => {
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, proxy-revalidate',
+    );
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+
   app.get('/api/health', (_req: Request, res: Response) => {
+    const diag = getServerSupabaseDiagnostics();
     res.json({
       ok: true,
-      supabaseConfigured: isServerSupabaseConfigured(),
+      supabaseConfigured: diag.configured,
+      env: {
+        hasUrl: diag.hasUrl,
+        hasKey: diag.hasKey,
+        urlVar: diag.urlVar,
+        keyVar: diag.keyVar,
+      },
     });
   });
 
@@ -80,6 +105,10 @@ async function startServer() {
             : 'Unexpected server error while placing your order.',
       });
     }
+  });
+
+  app.all('/api/*', (_req: Request, res: Response) => {
+    res.status(404).json({ ok: false, message: 'API route not found.' });
   });
 
   if (!isProd) {

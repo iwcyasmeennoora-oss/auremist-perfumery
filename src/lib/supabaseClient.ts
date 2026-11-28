@@ -1,5 +1,6 @@
 export interface ServerSupabaseHealth {
   ok: boolean;
+  apiReachable: boolean;
   supabaseConfigured: boolean;
 }
 
@@ -16,24 +17,58 @@ export interface ServerSupabaseTestResponse {
 
 let cachedSupabaseConfigured: boolean | null = null;
 
+async function readJsonResponse<T>(response: Response): Promise<T | null> {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    return null;
+  }
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchServerSupabaseStatus(): Promise<ServerSupabaseHealth> {
   try {
     const response = await fetch('/api/health', {
       method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     });
-    if (!response.ok) {
-      return { ok: false, supabaseConfigured: false };
+
+    if (response.ok) {
+      const data = await readJsonResponse<Partial<ServerSupabaseHealth>>(response);
+      if (data && typeof data.supabaseConfigured === 'boolean') {
+        cachedSupabaseConfigured = data.supabaseConfigured;
+        return {
+          ok: Boolean(data.ok),
+          apiReachable: true,
+          supabaseConfigured: data.supabaseConfigured,
+        };
+      }
     }
-    const data = (await response.json()) as Partial<ServerSupabaseHealth>;
-    const configured = Boolean(data.supabaseConfigured);
-    cachedSupabaseConfigured = configured;
-    return {
-      ok: Boolean(data.ok),
-      supabaseConfigured: configured,
-    };
+
+    const fallback = await fetch('/api/supabase/test', {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    const testData = await readJsonResponse<Partial<ServerSupabaseTestResponse>>(fallback);
+    if (testData && typeof testData.configured === 'boolean') {
+      cachedSupabaseConfigured = testData.configured;
+      return {
+        ok: Boolean(testData.ok),
+        apiReachable: true,
+        supabaseConfigured: testData.configured,
+      };
+    }
+
+    return { ok: false, apiReachable: false, supabaseConfigured: false };
   } catch {
-    return { ok: false, supabaseConfigured: false };
+    return { ok: false, apiReachable: false, supabaseConfigured: false };
   }
 }
 
@@ -45,9 +80,18 @@ export async function testServerSupabaseConnection(): Promise<ServerSupabaseTest
   try {
     const response = await fetch('/api/supabase/test', {
       method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     });
-    const data = (await response.json()) as ServerSupabaseTestResponse;
+    const data = await readJsonResponse<ServerSupabaseTestResponse>(response);
+    if (!data) {
+      return {
+        ok: false,
+        configured: false,
+        message: 'Backend Supabase health endpoint returned an unexpected response.',
+      };
+    }
     cachedSupabaseConfigured = Boolean(data.configured);
     return data;
   } catch {

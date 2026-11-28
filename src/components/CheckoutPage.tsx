@@ -125,6 +125,7 @@ export function CheckoutPage({
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(() =>
     isSupabaseConfigured(),
   );
+  const [apiReachable, setApiReachable] = useState<boolean>(true);
   const attemptIdempotencyKeyRef = useRef<string>(
     typeof window !== 'undefined' && window.crypto?.randomUUID
       ? window.crypto.randomUUID()
@@ -135,6 +136,7 @@ export function CheckoutPage({
     let active = true;
     fetchServerSupabaseStatus().then((status) => {
       if (active) {
+        setApiReachable(status.apiReachable);
         setSupabaseConnected(status.supabaseConfigured);
       }
     });
@@ -744,6 +746,14 @@ export function CheckoutPage({
                   Confirmed orders, delivery charges, and payment selection details
                   are saved directly to the AUREMIST database. Manual Easypaisa
                   and JazzCash transfers remain pending until verified by our team.
+                </>
+              ) : !apiReachable ? (
+                <>
+                  <strong className="font-semibold text-[#351522]">
+                    Backend Server Unavailable:
+                  </strong>{' '}
+                  Unable to reach the AUREMIST checkout API (/api/health). Ensure
+                  the full-stack server is running via node server.ts.
                 </>
               ) : (
                 <>
