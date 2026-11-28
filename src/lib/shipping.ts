@@ -179,23 +179,38 @@ export function saveStoreSettingsToStorage(
   }
 }
 
+let liveServerDeliveryZones: DeliveryZoneOption[] | null = null;
+
+export function setServerDeliveryZones(zones: DeliveryZoneOption[] | null): void {
+  liveServerDeliveryZones =
+    zones && zones.length > 0 ? zones : null;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('auremist:delivery-zones-updated'));
+  }
+}
+
 export function getActiveDeliveryZones(): DeliveryZoneOption[] {
+  const defaultZones =
+    liveServerDeliveryZones && liveServerDeliveryZones.length > 0
+      ? liveServerDeliveryZones
+      : mapAdminZonesToOptions(DEFAULT_DELIVERY_ZONES);
+
   if (typeof window === 'undefined') {
-    return mapAdminZonesToOptions(DEFAULT_DELIVERY_ZONES);
+    return defaultZones;
   }
   try {
     const raw = window.localStorage.getItem(STORE_SETTINGS_STORAGE_KEY);
     if (!raw) {
-      return mapAdminZonesToOptions(DEFAULT_DELIVERY_ZONES);
+      return defaultZones;
     }
     const parsed = JSON.parse(raw) as Partial<AdminStoreSettings>;
     if (Array.isArray(parsed?.deliveryZones)) {
       return mapAdminZonesToOptions(parsed.deliveryZones);
     }
   } catch {
-    // Fallback to default configured zones
+    // Fallback to live server / default configured zones
   }
-  return mapAdminZonesToOptions(DEFAULT_DELIVERY_ZONES);
+  return defaultZones;
 }
 
 export function isCountrySupportedForDelivery(country: string): boolean {

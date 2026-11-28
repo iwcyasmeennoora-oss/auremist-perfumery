@@ -45,7 +45,10 @@ import {
   isZoneCompatibleWithAddress,
   resolveDeliveryForAddress,
 } from '../lib/shipping';
-import { isSupabaseConfigured } from '../lib/supabaseClient';
+import {
+  fetchServerSupabaseStatus,
+  isSupabaseConfigured,
+} from '../lib/supabaseClient';
 import { submitCheckoutOrderToSupabase } from '../lib/supabaseOrders';
 import {
   AppliedCoupon,
@@ -97,9 +100,8 @@ export function CheckoutPage({
   onNavigateCart,
   onOrderConfirmed,
 }: CheckoutPageProps) {
-  const configuredZones: DeliveryZoneOption[] = useMemo(
+  const [configuredZones, setConfiguredZones] = useState<DeliveryZoneOption[]>(
     () => getConfiguredDeliveryZones(),
-    [],
   );
 
   const [customer, setCustomer] =
@@ -120,7 +122,31 @@ export function CheckoutPage({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
-  const supabaseConnected = useMemo(() => isSupabaseConfigured(), []);
+  const [supabaseConnected, setSupabaseConnected] = useState<boolean>(() =>
+    isSupabaseConfigured(),
+  );
+  const attemptIdempotencyKeyRef = useRef<string>(
+    typeof window !== 'undefined' && window.crypto?.randomUUID
+      ? window.crypto.randomUUID()
+      : `idemp-${Date.now()}`,
+  );
+
+  useEffect(() => {
+    let active = true;
+    fetchServerSupabaseStatus().then((status) => {
+      if (active) {
+        setSupabaseConnected(status.supabaseConfigured);
+      }
+    });
+    const refreshZones = () => {
+      setConfiguredZones(getConfiguredDeliveryZones());
+    };
+    window.addEventListener('auremist:delivery-zones-updated', refreshZones);
+    return () => {
+      active = false;
+      window.removeEventListener('auremist:delivery-zones-updated', refreshZones);
+    };
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const proofUrlRef = useRef<string | null>(null);
@@ -325,6 +351,7 @@ export function CheckoutPage({
     const result = await submitCheckoutOrderToSupabase(
       orderSnapshot,
       paymentProof,
+      attemptIdempotencyKeyRef.current,
     );
 
     if (!result.ok) {
@@ -336,10 +363,23 @@ export function CheckoutPage({
 
     const savedOrder: CheckoutOrderPreview = {
       ...orderSnapshot,
+      orderNumber: result.orderNumber,
+      createdAt: result.createdAt,
+      itemSubtotal: result.itemSubtotal,
+      discountAmount: result.discountAmount,
+      deliveryFee: result.deliveryFee,
+      grandTotal: result.grandTotal,
+      deliveryZoneId: result.deliveryZoneId,
+      deliveryZoneName: result.deliveryZoneName,
+      coupon: result.coupon,
       backendOrderId: result.orderId,
       backendTrackingStages: ['order_received'],
       isDemoPreview: false,
     };
+
+    if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+      attemptIdempotencyKeyRef.current = window.crypto.randomUUID();
+    }
 
     if (paymentProof?.previewObjectUrl) {
       URL.revokeObjectURL(paymentProof.previewObjectUrl);
@@ -710,9 +750,9 @@ export function CheckoutPage({
                   <strong className="font-semibold text-[#351522]">
                     Database Setup Required:
                   </strong>{' '}
-                  Supabase environment credentials are missing. Configure
-                  VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to save
-                  submitted orders.
+                  Server Supabase environment credentials are missing. Configure
+                  SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY on the server to
+                  save submitted orders.
                 </>
               )}
             </p>

@@ -1,61 +1,60 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-let cachedClient: SupabaseClient | null = null;
-let cachedConfigKey: string | null = null;
-
-export function normalizeSupabaseUrl(rawUrl: string | undefined): string | null {
-  if (!rawUrl || typeof rawUrl !== 'string') return null;
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return null;
-
-  const stripped = trimmed.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
-  try {
-    const parsed = new URL(stripped);
-    const isLocalhost =
-      parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-    if (parsed.protocol !== 'https:' && !(isLocalhost && parsed.protocol === 'http:')) {
-      return null;
-    }
-    return parsed.origin;
-  } catch {
-    return null;
-  }
+export interface ServerSupabaseHealth {
+  ok: boolean;
+  supabaseConfigured: boolean;
 }
 
-function getSupabaseEnv(): { url: string | null; key: string | null } {
-  const url = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
-  const rawKey =
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY;
-  const key =
-    typeof rawKey === 'string' && rawKey.trim().length > 0
-      ? rawKey.trim()
-      : null;
+export interface ServerSupabaseTestResponse {
+  ok: boolean;
+  configured: boolean;
+  message: string;
+  counts?: {
+    products: number;
+    productVariants: number;
+    deliveryZones: number;
+  };
+}
 
-  return { url, key };
+let cachedSupabaseConfigured: boolean | null = null;
+
+export async function fetchServerSupabaseStatus(): Promise<ServerSupabaseHealth> {
+  try {
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) {
+      return { ok: false, supabaseConfigured: false };
+    }
+    const data = (await response.json()) as Partial<ServerSupabaseHealth>;
+    const configured = Boolean(data.supabaseConfigured);
+    cachedSupabaseConfigured = configured;
+    return {
+      ok: Boolean(data.ok),
+      supabaseConfigured: configured,
+    };
+  } catch {
+    return { ok: false, supabaseConfigured: false };
+  }
 }
 
 export function isSupabaseConfigured(): boolean {
-  const { url, key } = getSupabaseEnv();
-  return Boolean(url && key);
+  return cachedSupabaseConfigured ?? true;
 }
 
-export function getSupabaseClient(): SupabaseClient | null {
-  const { url, key } = getSupabaseEnv();
-  if (!url || !key) return null;
-
-  const configKey = `${url}::${key.slice(0, 12)}`;
-  if (cachedClient && cachedConfigKey === configKey) {
-    return cachedClient;
+export async function testServerSupabaseConnection(): Promise<ServerSupabaseTestResponse> {
+  try {
+    const response = await fetch('/api/supabase/test', {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    const data = (await response.json()) as ServerSupabaseTestResponse;
+    cachedSupabaseConfigured = Boolean(data.configured);
+    return data;
+  } catch {
+    return {
+      ok: false,
+      configured: false,
+      message: 'Unable to reach backend Supabase health check endpoint.',
+    };
   }
-
-  cachedClient = createClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-  cachedConfigKey = configKey;
-  return cachedClient;
 }

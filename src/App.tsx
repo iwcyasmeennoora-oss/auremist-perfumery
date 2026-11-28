@@ -21,7 +21,7 @@ import { SearchModal } from './components/SearchModal';
 import { ServiceHighlights } from './components/ServiceHighlights';
 import { ShopPage } from './components/ShopPage';
 import { WishlistDrawer } from './components/WishlistDrawer';
-import { ALL_PERFUMES, FEATURED_PERFUMES } from './data/fragrances';
+import { ALL_PERFUMES } from './data/fragrances';
 import {
   getVariantStockCount,
   loadGuestCart,
@@ -33,6 +33,7 @@ import {
   saveSessionConfirmedOrder,
 } from './lib/orderConfirmation';
 import { appendStoredOrderFromCheckout } from './lib/shipping';
+import { fetchLiveCatalogAndZones } from './lib/supabaseCatalog';
 import { loadWishlistIds, saveWishlistIds } from './lib/wishlist';
 import { LUXURY_EASE } from './lib/motion';
 import { AdminSection } from './types/admin';
@@ -139,6 +140,8 @@ export default function App() {
   const [adminSection, setAdminSection] = useState<AdminSection>(
     initialRoute.adminSection,
   );
+  const [catalogProducts, setCatalogProducts] =
+    useState<PerfumeProduct[]>(ALL_PERFUMES);
   const [selectedProduct, setSelectedProduct] = useState<PerfumeProduct>(
     initialRoute.product,
   );
@@ -165,6 +168,21 @@ export default function App() {
     action?: 'cart' | 'wishlist';
   } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchLiveCatalogAndZones().then(({ products }) => {
+      if (!active) return;
+      setCatalogProducts(products);
+      setSelectedProduct((prev) => {
+        const refreshed = products.find((p) => p.id === prev.id);
+        return refreshed ?? prev;
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     saveGuestCart(cartItems, giftWrap, appliedCoupon);
@@ -194,7 +212,8 @@ export default function App() {
   }, []);
 
   const totalCartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const wishlistProducts = ALL_PERFUMES.filter((p) =>
+  const featuredProducts = catalogProducts.slice(0, 4);
+  const wishlistProducts = catalogProducts.filter((p) =>
     wishlistIds.includes(p.id),
   );
 
@@ -446,6 +465,9 @@ export default function App() {
     setCurrentPage('order-confirmation');
     pushRoutePath('/order-confirmation');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    void fetchLiveCatalogAndZones().then(({ products }) => {
+      setCatalogProducts(products);
+    });
   };
 
   const handleNavigateAdminSection = (
@@ -499,7 +521,7 @@ export default function App() {
               <ServiceHighlights />
 
               <FeaturedCollection
-                products={FEATURED_PERFUMES}
+                products={featuredProducts}
                 selectedCategory={selectedCategory}
                 wishlistIds={wishlistIds}
                 onSelectCategory={setSelectedCategory}
@@ -522,7 +544,7 @@ export default function App() {
 
           {currentPage === 'shop' && (
             <ShopPage
-              products={ALL_PERFUMES}
+              products={catalogProducts}
               wishlistIds={wishlistIds}
               onNavigateHome={() => handleNavigate('home', 'home')}
               onViewDetails={handleOpenProductDetail}
@@ -534,7 +556,7 @@ export default function App() {
           {currentPage === 'product' && (
             <ProductDetailPage
               product={selectedProduct}
-              allProducts={ALL_PERFUMES}
+              allProducts={catalogProducts}
               cartItems={cartItems}
               isWishlisted={wishlistIds.includes(selectedProduct.id)}
               onNavigateHome={() => handleNavigate('home', 'home')}
@@ -691,7 +713,7 @@ export default function App() {
 
         <SearchModal
           isOpen={isSearchOpen}
-          products={ALL_PERFUMES}
+          products={catalogProducts}
           onClose={() => setIsSearchOpen(false)}
           onSelectProduct={handleOpenProductDetail}
         />
